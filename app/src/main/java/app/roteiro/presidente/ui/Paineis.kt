@@ -183,19 +183,20 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
 
         Text(s["arq_brochuras"], fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 14.dp))
         for (pub in listOf("th", "lmd")) for (lang in listOf("pt", "es")) {
-            val n = vm.dados.oficiais[pub]?.get(lang)?.size ?: 0
+            val n = vm.qtdOficiais(pub, lang)
+            val importado = vm.oficiaisImportados(pub, lang)
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${if (pub == "th") s["lic_th"] else s["lic_lmd"]} · ${Textos.NOME_IDIOMA[lang]}", color = c.tinta, modifier = Modifier.weight(1f))
                 if (n > 0) {
-                    Text("✓ $n ${s["licoes"].lowercase()}", color = c.ok, fontWeight = FontWeight.SemiBold)
-                    TextButton(onClick = { vm.removerOficiais(pub, lang) }) { Text(s["ap_rem"], color = c.erro) }
+                    Text("✓ $n ${s["licoes"].lowercase()} · ${if (importado) s["ap_imp"] else s["ap_emb"]}", color = c.ok, fontWeight = FontWeight.SemiBold)
+                    if (importado) TextButton(onClick = { vm.removerOficiais(pub, lang) }) { Text(s["ap_rem"], color = c.erro) }
                 } else Text(s["br_nenhuma"], color = c.suave)
             }
         }
 
         Text(s["canticos"], fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 14.dp))
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(listOf("pt", "es").joinToString(" · ") { "${Textos.NOME_IDIOMA[it]}: ${vm.dados.canticos[it]?.size ?: 0}" },
+            Text(listOf("pt", "es").joinToString(" · ") { "${Textos.NOME_IDIOMA[it]}: ${vm.canticos(it).size}" },
                 color = c.suave, modifier = Modifier.weight(1f))
             OutlinedButton(onClick = aoCanticos) { Text(s["verEditar"]) }
         }
@@ -231,7 +232,7 @@ fun PainelCanticos(vm: AppVM, aoFechar: () -> Unit) {
     var num by rememberSaveable { mutableStateOf("") }
     var tit by rememberSaveable { mutableStateOf("") }
     val abrir = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.importar(uris) }
-    val lista = vm.dados.canticos[lang].orEmpty().entries.sortedBy { it.key.toIntOrNull() ?: 0 }
+    val lista = vm.canticos(lang).entries.sortedBy { it.key.toIntOrNull() ?: 0 }
     Painel(s["canticos"], aoFechar, rolavel = false) {
         Text(s["can_info"], color = c.suave, fontSize = 15.sp)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 10.dp)) {
@@ -258,7 +259,7 @@ fun PainelCanticos(vm: AppVM, aoFechar: () -> Unit) {
                 HorizontalDivider(color = c.linha)
             }
         }
-        if (lista.isNotEmpty()) TextButton(onClick = { vm.limparCanticos(lang) }) {
+        if (vm.dados.canticos[lang].orEmpty().isNotEmpty()) TextButton(onClick = { vm.limparCanticos(lang) }) {
             Text(Textos.formatar(s["can_limpar"], "i" to Textos.NOME_IDIOMA[lang]), color = c.erro)
         }
     }
@@ -275,7 +276,7 @@ fun PainelLicoes(vm: AppVM, aoFechar: () -> Unit) {
         Row(Modifier.padding(bottom = 10.dp)) {
             Opcoes(listOf("th" to s["lic_th"], "lmd" to s["lic_lmd"]), aba) { aba = it }
         }
-        if (lang == "es" && vm.dados.oficiais[aba]?.get("es").isNullOrEmpty()) Text(s["lic_prov"], color = c.suave, fontSize = 14.sp)
+        if (lang == "es" && vm.qtdOficiais(aba, "es") == 0) Text(s["lic_prov"], color = c.suave, fontSize = 14.sp)
         val cartao = Modifier.fillMaxWidth().padding(vertical = 5.dp).border(1.dp, c.linha, RoundedCornerShape(10.dp)).padding(12.dp)
         if (aba == "th") {
             vm.licoes.th.entries.sortedBy { it.key.toInt() }.forEach { (n, d) ->

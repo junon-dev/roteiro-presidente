@@ -9,6 +9,8 @@ import app.roteiro.presidente.nucleo.LicaoOficial
 import app.roteiro.presidente.nucleo.Semana
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
@@ -90,6 +92,21 @@ class Repositorio(private val ctx: Context) {
     fun semanasEmbutidas(): List<Semana> = try {
         ctx.assets.open("semanas.json").bufferedReader().use { json.decodeFromString(ListSerializer(Semana.serializer()), it.readText()) }
     } catch (e: Exception) { emptyList() }
+
+    /** Títulos oficiais das lições (th/lmd) incluídos no app: pub -> idioma -> número -> títulos. */
+    fun oficiaisEmbutidos(): Map<String, Map<String, Map<String, LicaoOficial>>> = try {
+        ctx.assets.open("oficiais.json").bufferedReader().use {
+            json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(),
+                MapSerializer(String.serializer(), LicaoOficial.serializer()))), it.readText())
+        }
+    } catch (e: Exception) { emptyMap() }
+
+    /** Títulos dos cânticos (Cante de Coração para Jeová) incluídos no app: idioma -> número -> título. */
+    fun canticosEmbutidos(): Map<String, Map<String, String>> = try {
+        ctx.assets.open("canticos.json").bufferedReader().use {
+            json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(), String.serializer())), it.readText())
+        }
+    } catch (e: Exception) { emptyMap() }
 
     fun licoes(): BaseLicoes = try {
         ctx.assets.open("licoes.json").bufferedReader().use { json.decodeFromString(BaseLicoes.serializer(), it.readText()) }

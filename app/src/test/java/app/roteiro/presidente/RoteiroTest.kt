@@ -7,6 +7,8 @@ import app.roteiro.presidente.nucleo.ItemRoteiro
 import app.roteiro.presidente.nucleo.Roteiro
 import app.roteiro.presidente.nucleo.Semana
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -28,6 +30,22 @@ class RoteiroTest {
             assertEquals("21:15", r.fim)
             val estudantes = r.itens.filterIsInstance<ItemRoteiro.BlocoR>().count { it.b.conselho != null }
             assertTrue("${sem.id}: partes de estudante", estudantes >= 3)
+        }
+    }
+
+    @Test
+    fun titulosIncluidosNoApp() {
+        val can = json.decodeFromString(MapSerializer(String.serializer(),
+            MapSerializer(String.serializer(), String.serializer())),
+            File("src/main/assets/canticos.json").readText())
+        assertTrue((can["pt"]?.size ?: 0) >= 150 && (can["es"]?.size ?: 0) >= 150)
+        val of = json.decodeFromString(MapSerializer(String.serializer(),
+            MapSerializer(String.serializer(),
+                MapSerializer(String.serializer(), app.roteiro.presidente.nucleo.LicaoOficial.serializer()))),
+            File("src/main/assets/oficiais.json").readText())
+        for (lang in listOf("pt", "es")) {
+            assertEquals(20, of["th"]?.get(lang)?.size)
+            assertEquals(12, of["lmd"]?.get(lang)?.size)
         }
     }
 

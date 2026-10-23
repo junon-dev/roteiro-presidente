@@ -32,7 +32,10 @@ object LeitorBrochura {
     /** Título do ponto: texto até o primeiro ponto final (". "). */
     private fun cabecalho(par: String): String {
         val i = Regex("\\.(\\s|$)").find(par)?.range?.first ?: return par.trim()
-        return par.substring(0, i).trim()
+        var t = par.substring(0, i).trim()
+        // referência bíblica entre parênteses antes do ponto final ("prudente (Mat. 10:16)")
+        if (t.count { it == '(' } > t.count { it == ')' }) t = t.substring(0, t.lastIndexOf('(')).trim()
+        return t
     }
 
     /** Agrupa um parágrafo: a linha inicial e as continuações logo abaixo, com recuo e fonte iguais. */

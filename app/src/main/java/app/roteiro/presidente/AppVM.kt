@@ -40,6 +40,8 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     private val importador = Importador(app)
     val embutidas: List<Semana> = repo.semanasEmbutidas()
     val licoes: BaseLicoes = repo.licoes()
+    val oficiaisEmbutidos = repo.oficiaisEmbutidos()
+    val canticosEmbutidos = repo.canticosEmbutidos()
 
     var dados by mutableStateOf(repo.carregar())
         private set
@@ -143,14 +145,21 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     fun mudarCfg(f: (Config) -> Config) = mudar { it.copy(cfg = f(it.cfg)) }
 
     /* ---------- cânticos e títulos oficiais ---------- */
-    fun tituloCantico(lang: String, n: Int): String? = dados.canticos[lang]?.get(n.toString())
+    fun tituloCantico(lang: String, n: Int): String? =
+        dados.canticos[lang]?.get(n.toString()) ?: canticosEmbutidos[lang]?.get(n.toString())
+    /** Todos os títulos (incluídos no app + importados/corrigidos pelo usuário). */
+    fun canticos(lang: String): Map<String, String> = canticosEmbutidos[lang].orEmpty() + dados.canticos[lang].orEmpty()
     fun definirCantico(lang: String, n: Int, titulo: String) = mudar { a ->
         val atual = a.canticos[lang].orEmpty()
         val novo = if (titulo.isBlank()) atual - n.toString() else atual + (n.toString() to titulo.trim())
         a.copy(canticos = a.canticos + (lang to novo))
     }
     fun limparCanticos(lang: String) = mudar { it.copy(canticos = it.canticos - lang) }
-    fun oficial(pub: String, lang: String, n: Int): LicaoOficial? = dados.oficiais[pub]?.get(lang)?.get(n.toString())
+    fun oficial(pub: String, lang: String, n: Int): LicaoOficial? =
+        dados.oficiais[pub]?.get(lang)?.get(n.toString()) ?: oficiaisEmbutidos[pub]?.get(lang)?.get(n.toString())
+    fun qtdOficiais(pub: String, lang: String): Int =
+        (oficiaisEmbutidos[pub]?.get(lang).orEmpty().keys + dados.oficiais[pub]?.get(lang).orEmpty().keys).size
+    fun oficiaisImportados(pub: String, lang: String): Boolean = !dados.oficiais[pub]?.get(lang).isNullOrEmpty()
 
     fun roteiro(sem: Semana): RoteiroMontado = Roteiro.montar(
         sem, estado(sem.id), cfg, licoes, proximaDe(sem),
