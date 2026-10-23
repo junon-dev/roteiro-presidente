@@ -36,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -159,6 +160,19 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
         Linha(s["som"]) { Switch(vm.cfg.som, { on -> vm.mudarCfg { it.copy(som = on) } }) }
         Linha(s["vibrar"]) { Switch(vm.cfg.vibrar, { on -> vm.mudarCfg { it.copy(vibrar = on) } }) }
         Linha(s["tela"]) { Switch(vm.cfg.tela, { on -> vm.mudarCfg { it.copy(tela = on) } }) }
+        // Tamanho do texto: barra com 6 posições, como no JW Library
+        Text(s["tamTexto"], fontWeight = FontWeight.SemiBold, color = c.tinta, modifier = Modifier.padding(top = 10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+            Text("A", fontSize = 15.sp, color = c.suave)
+            Slider(
+                value = vm.cfg.fonte.toFloat(),
+                onValueChange = { v -> val n = Math.round(v); if (n != vm.cfg.fonte) vm.mudarCfg { it.copy(fonte = n) } },
+                valueRange = 0f..5f, steps = 4,
+                modifier = Modifier.weight(1f).padding(horizontal = 14.dp),
+            )
+            Text("A", fontSize = 30.sp, color = c.suave)
+        }
+        HorizontalDivider(color = c.linha)
         Linha(s["tema"]) { Opcoes(listOf("auto" to s["temaAuto"], "claro" to s["temaClaro"], "escuro" to s["temaEscuro"]), vm.cfg.tema) { t -> vm.mudarCfg { it.copy(tema = t) } } }
 
         // Arquivos

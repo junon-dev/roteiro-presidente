@@ -3,6 +3,7 @@ package app.roteiro.presidente.nucleo
 /** Textos da interface em português e espanhol (gerado a partir da versão HTML + textos do app nativo). */
 object Textos {
     private val pt: Map<String, String> = mapOf(
+        "tamTexto" to "Tamanho do texto",
         "reuniao" to "Reunião",
         "faltam" to "faltam {n} min",
         "iniciar" to "Iniciar",
@@ -184,6 +185,7 @@ object Textos {
     )
     private val ptSecoes: Map<String, String> = mapOf("tesouros" to "Tesouros da Palavra de Deus", "ministerio" to "Faça Seu Melhor no Ministério", "vida" to "Nossa Vida Cristã")
     private val es: Map<String, String> = mapOf(
+        "tamTexto" to "Tamaño del texto",
         "reuniao" to "Reunión",
         "faltam" to "faltan {n} min",
         "iniciar" to "Iniciar",

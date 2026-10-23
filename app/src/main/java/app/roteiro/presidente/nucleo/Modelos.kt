@@ -64,6 +64,7 @@ data class Config(
     val vibrar: Boolean = true,
     val tela: Boolean = true,
     val tema: String = "auto",   // auto, claro, escuro
+    val fonte: Int = 2,          // tamanho do texto: 0 (menor) a 5 (maior); 2 = normal
 )
 
 /** Estado de uma semana: visita do SC, salas adicionais e valores digitados (nomes, anotações, marcações). */

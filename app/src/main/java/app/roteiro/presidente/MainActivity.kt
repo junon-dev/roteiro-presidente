@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            TemaApp(vm.cfg.tema) { TelaPrincipal(vm) }
+            TemaApp(vm.cfg.tema, vm.cfg.fonte) { TelaPrincipal(vm) }
         }
     }
 

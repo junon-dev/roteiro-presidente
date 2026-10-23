@@ -9,6 +9,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -45,8 +47,11 @@ val CoresEscuras = Cores(
 
 val LocalCores = staticCompositionLocalOf { CoresClaras }
 
+/** Fatores dos 6 tamanhos de texto (Configurações → Tamanho do texto). */
+val ESCALAS_FONTE = listOf(0.85f, 0.93f, 1.0f, 1.12f, 1.25f, 1.4f)
+
 @Composable
-fun TemaApp(tema: String, conteudo: @Composable () -> Unit) {
+fun TemaApp(tema: String, fonte: Int = 2, conteudo: @Composable () -> Unit) {
     val escuro = when (tema) { "escuro" -> true; "claro" -> false; else -> isSystemInDarkTheme() }
     val c = if (escuro) CoresEscuras else CoresClaras
     val esquema = if (escuro) darkColorScheme(
@@ -56,7 +61,9 @@ fun TemaApp(tema: String, conteudo: @Composable () -> Unit) {
         primary = c.falaBorda, onPrimary = Color.White, background = c.fundo, surface = c.cartao, onSurface = c.tinta,
         onBackground = c.tinta, surfaceVariant = c.campo, onSurfaceVariant = c.suave, outline = Color(0xFFAEB6C2), secondary = c.ministerio,
     )
-    CompositionLocalProvider(LocalCores provides c) {
+    val dens = LocalDensity.current
+    val escala = ESCALAS_FONTE[fonte.coerceIn(0, ESCALAS_FONTE.size - 1)]
+    CompositionLocalProvider(LocalCores provides c, LocalDensity provides Density(dens.density, dens.fontScale * escala)) {
         MaterialTheme(colorScheme = esquema, content = conteudo)
     }
 }
