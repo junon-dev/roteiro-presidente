@@ -135,13 +135,13 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
     val salvarBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
             val ok = runCatching { ctx.contentResolver.openOutputStream(uri, "wt")?.use { it.write(vm.exportarTexto().toByteArray()) } }.isSuccess
-            vm.avisar(if (ok) s["salvo"] else s["salvoErro"])
+            vm.resultado = if (ok) s["salvo"] else s["salvoErro"]
         }
     }
     val abrirBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val t = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }.getOrNull()
-            vm.avisar(if (t != null && vm.importarTexto(t)) s["importado"] else s["imp_erro"])
+            vm.resultado = if (t != null && vm.importarTexto(t)) s["importado"] else s["imp_erro"]
         }
     }
 
@@ -217,7 +217,7 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
     if (confirmarLimpar) AlertDialog(
         onDismissRequest = { confirmarLimpar = false },
         text = { Text(s["confLimpar"]) },
-        confirmButton = { TextButton(onClick = { vm.limparSemana(); confirmarLimpar = false; vm.avisar(s["limpo"]) }) { Text(s["confirmar"]) } },
+        confirmButton = { TextButton(onClick = { vm.limparSemana(); confirmarLimpar = false; vm.resultado = s["limpo"] }) { Text(s["confirmar"]) } },
         dismissButton = { TextButton(onClick = { confirmarLimpar = false }) { Text(s["cancelar"]) } },
     )
 }

@@ -205,8 +205,10 @@ fun TelaPrincipal(vm: AppVM) {
             confirmButton = { TextButton(onClick = { vm.resultado = null }) { Text("OK") } },
         )
     }
+    // "Lendo arquivo…": janela própria, para aparecer por cima do painel de Configurações
     vm.ocupado?.let { msg ->
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)).clickable(enabled = true) {}, contentAlignment = Alignment.Center) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {},
+            properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)) {
             Surface(shape = RoundedCornerShape(14.dp)) {
                 Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(28.dp))
