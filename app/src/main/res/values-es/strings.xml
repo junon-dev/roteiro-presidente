@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Guion del presidente</string>
+    <string name="voltar_sair">Toque atrás otra vez para salir</string>
+    <string name="sem_seletor">No hay ninguna aplicación de archivos disponible</string>
+</resources>

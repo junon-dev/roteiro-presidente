@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Roteiro do Presidente</string>
+    <string name="voltar_sair">Toque em voltar de novo para sair</string>
+    <string name="sem_seletor">Nenhum aplicativo de arquivos disponível</string>
+</resources>

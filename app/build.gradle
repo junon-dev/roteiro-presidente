@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Senha da chave: variável de ambiente RP_KEYSTORE_PASSWORD ou arquivo keystore/senha.txt
+def senhaChave = System.getenv('RP_KEYSTORE_PASSWORD')
+def arqSenha = rootProject.file('keystore/senha.txt')
+if (!senhaChave && arqSenha.exists()) senhaChave = arqSenha.text.trim()
+
+android {
+    namespace 'app.roteiro.presidente'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'app.roteiro.presidente'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        roteiro {
+            storeFile file(project.property('RP_KEYSTORE'))
+            storePassword senhaChave
+            keyAlias project.property('RP_KEY_ALIAS')
+            keyPassword senhaChave
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.roteiro
+        }
+        debug {
+            // mesma assinatura do release: o app de teste também atualiza por cima sem perder dados
+            signingConfig signingConfigs.roteiro
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // Não compactar os arquivos do app (carregamento mais rápido)
+    androidResources {
+        noCompress += ['html', 'js']
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

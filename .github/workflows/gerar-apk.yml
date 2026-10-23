@@ -1,0 +1,48 @@
+name: Gerar APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compilar o APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Preparar o arquivo
+        id: apk
+        run: |
+          VERSAO=$(grep -oP "versionName '\K[^']+" app/build.gradle)
+          NOME="RoteiroPresidente-v${VERSAO}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$NOME"
+          echo "nome=$NOME" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSAO}-b${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "versao=${VERSAO}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.nome }}
+          path: ${{ steps.apk.outputs.nome }}
+
+      - name: Publicar para download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.apk.outputs.tag }}" "${{ steps.apk.outputs.nome }}" \
+            --title "Roteiro do Presidente ${{ steps.apk.outputs.versao }} (compilação ${{ github.run_number }})" \
+            --notes "Baixe o arquivo .apk abaixo no tablet e toque nele para instalar."

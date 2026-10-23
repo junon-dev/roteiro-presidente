@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3b4d">
+<title>Roteiro do Presidente</title>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --tinta:#1d2430; --suave:#5b6472; --linha:#dfe3e8; --campo:#f8f9fb;
+  --tesouros:#2f6f7a; --ministerio:#a8740f; --vida:#a33a2a;
+  --fala-bg:#eef4fb; --fala-bd:#3b6fb6; --cons-bg:#fbf6ea; --cons-bd:#ead8ad;
+  --sala:#6a4fb3; --sala-bg:#f3effb; --sc:#b4530b; --sc-bg:#fff3e8;
+  --ok:#2e7d4f; --alerta:#c98a0b; --erro:#c0392b; --barra:#1f3b4d;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-tema="claro"]){
+  --bg:#12161c; --card:#1b2129; --tinta:#e6e9ee; --suave:#9aa4b2; --linha:#2c343f; --campo:#232a33;
+  --fala-bg:#1d2a3a; --fala-bd:#6a9be0; --cons-bg:#2a2518; --cons-bd:#4a3f22; --sala-bg:#241f33; --sc-bg:#33251a;
+  --tesouros:#4c9aa6; --ministerio:#d39b2c; --vida:#d0614f; --barra:#0d1a24;
+}}
+:root[data-tema="escuro"]{
+  --bg:#12161c; --card:#1b2129; --tinta:#e6e9ee; --suave:#9aa4b2; --linha:#2c343f; --campo:#232a33;
+  --fala-bg:#1d2a3a; --fala-bd:#6a9be0; --cons-bg:#2a2518; --cons-bd:#4a3f22; --sala-bg:#241f33; --sc-bg:#33251a;
+  --tesouros:#4c9aa6; --ministerio:#d39b2c; --vida:#d0614f; --barra:#0d1a24;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tinta);font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+/* Barra superior */
+header.topo{position:sticky;top:0;z-index:20;background:var(--barra);color:#fff;padding:8px 14px calc(8px);display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+header .marca{font-weight:700;font-size:17px;margin-right:auto;white-space:nowrap}
+header .marca small{display:block;font-weight:400;font-size:12px;opacity:.75}
+.navsem{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.1);border-radius:10px;padding:2px}
+.navsem button{background:none;border:0;color:#fff;width:40px;height:40px;border-radius:8px;font-size:20px}
+.navsem button:active{background:rgba(255,255,255,.15)}
+.navsem select{background:transparent;border:0;color:#fff;font-weight:600;max-width:46vw;padding:6px 2px}
+.navsem select option{color:#000}
+.btop{background:rgba(255,255,255,.12);border:0;color:#fff;padding:9px 13px;border-radius:10px;font-weight:600;display:inline-flex;align-items:center;gap:6px;min-height:42px}
+.btop.ativo{background:#fff;color:var(--barra)}
+.btop svg{width:20px;height:20px}
+.lang{display:flex;border-radius:10px;overflow:hidden;background:rgba(255,255,255,.12)}
+.lang button{border:0;background:none;color:#fff;padding:9px 12px;font-weight:700;min-height:42px}
+.lang button.on{background:#fff;color:var(--barra)}
+main{max-width:920px;margin:0 auto;padding:14px 14px 140px}
+/* Cabeçalho da semana */
+.cabsem{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px;border:1px solid var(--linha)}
+.cabsem .sup{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--suave);font-weight:600}
+.cabsem h1{font-size:23px;margin:2px 0 10px;line-height:1.2}
+.opcoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--linha);border-radius:999px;padding:6px 12px;background:var(--campo);font-size:15px;font-weight:600;min-height:42px;user-select:none}
+.chip input[type=checkbox]{width:20px;height:20px;accent-color:var(--sc)}
+.chip.on{border-color:var(--sc);background:var(--sc-bg)}
+.chip.sala.on{border-color:var(--sala);background:var(--sala-bg)}
+.chip.trava{opacity:.55}
+.chip input[type=time]{border:0;background:transparent;font-weight:700;width:7.6em}
+.lembretes{margin-top:10px;font-size:14px;color:var(--suave)}
+.lembretes summary{cursor:pointer;font-weight:600;color:var(--tinta);padding:4px 0}
+.lembretes ul{margin:4px 0 0;padding-left:18px}
+/* Seções e blocos */
+.secao{margin:16px 0 6px;padding:7px 12px;color:#fff;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.07em;border-radius:8px}
+.secao.tesouros{background:var(--tesouros)}.secao.ministerio{background:var(--ministerio)}.secao.vida{background:var(--vida)}
+.bloco{display:flex;gap:12px;background:var(--card);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin:8px 0;scroll-margin:90px 0 150px;transition:box-shadow .2s, border-color .2s}
+.bloco .hora{width:52px;flex:none;font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;padding-top:1px}
+.bloco .cont{flex:1;min-width:0;border-left:4px solid #c9ced6;padding-left:12px}
+.bloco.tesouros .cont{border-color:var(--tesouros)}.bloco.ministerio .cont{border-color:var(--ministerio)}.bloco.vida .cont{border-color:var(--vida)}
+.bloco.sala{background:var(--sala-bg)} .bloco.sala .cont{border-left:4px dashed var(--sala)} .bloco.sala .tit{color:var(--sala)}
+.bloco.scmuda{background:var(--sc-bg)} .bloco.scmuda .cont{border-color:var(--sc)} .bloco.scmuda .tit{color:var(--sc)}
+.bloco.atual{border-color:var(--fala-bd);box-shadow:0 0 0 3px color-mix(in srgb, var(--fala-bd) 35%, transparent)}
+.bloco.feito{opacity:.6}
+.tit{font-weight:700;font-size:18px;line-height:1.3;margin-bottom:4px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.tit .dur{margin-left:auto;font-size:13px;font-weight:600;color:var(--suave);background:var(--campo);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ministerio);border:1.5px solid currentColor;border-radius:5px;padding:0 5px}
+.fala{background:var(--fala-bg);border-left:3px solid var(--fala-bd);padding:8px 11px;margin:6px 0;border-radius:0 8px 8px 0;font-size:18px;line-height:1.55}
+.instr{color:var(--suave);font-size:15px;margin:5px 0}
+.instr b{color:var(--tinta)}
+.nota-sc{background:var(--sc-bg);color:var(--sc);border-radius:8px;padding:8px 11px;margin:8px 0 8px 64px;font-size:15px;font-weight:500}
+.dica{margin:4px 0 4px 64px;font-size:14px;color:var(--suave);font-style:italic}
+input.campo{display:inline-block;border:1.5px solid #aeb6c2;border-radius:7px;background:var(--campo);padding:2px 8px;min-width:8.5em;max-width:100%;font-size:17px;font-weight:600;vertical-align:baseline;height:1.75em}
+input.campo:placeholder-shown{font-weight:400}
+input.campo::placeholder{color:#97a0ad;font-size:14px}
+input.campo:focus{outline:none;border-color:var(--fala-bd);background:var(--card)}
+textarea.campo{display:block;width:100%;border:1.5px solid #aeb6c2;border-radius:8px;background:var(--campo);padding:7px 9px;min-height:2.4em;resize:vertical;font-size:16px;margin-top:6px}
+.linha-b{margin-top:6px;padding:6px 9px;border:1.5px dashed var(--sala);background:var(--sala-bg);border-radius:8px;color:var(--sala);font-size:15px}
+.linha-b b{margin-right:6px}
+/* Conselho */
+.cons{margin-top:9px;background:var(--cons-bg);border:1px solid var(--cons-bd);border-radius:10px;padding:9px 12px;font-size:15.5px;transition:box-shadow .2s}
+.cons.atual{box-shadow:0 0 0 3px color-mix(in srgb, var(--ministerio) 45%, transparent)}
+.cons .ch{font-weight:800;color:var(--ministerio);font-size:13px;text-transform:uppercase;letter-spacing:.06em;display:flex;gap:8px;align-items:center}
+.cons .ch span{font-weight:600;text-transform:none;letter-spacing:0}
+.cons .lic{font-weight:700;margin:4px 0 2px}
+.cons .obj{color:var(--suave);font-size:14.5px;margin-bottom:4px}
+.cons .pontos{list-style:none;margin:4px 0;padding:0}
+.cons .pontos li{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-top:1px dashed var(--cons-bd)}
+.cons .pontos li:first-child{border-top:0}
+.cons .pontos input{width:22px;height:22px;margin-top:2px;flex:none;accent-color:var(--ok)}
+.cons .pontos li.destaque{background:color-mix(in srgb, var(--ministerio) 13%, transparent);border-radius:6px;padding:6px;margin:2px -6px}
+.cons .pontos li.destaque b{color:var(--ministerio)}
+.cons .outros{font-size:14px;color:var(--suave);margin-top:4px}
+.cons .outros summary{cursor:pointer}
+.cons .passos{font-size:14.5px;margin:6px 0 2px;color:var(--suave)}
+.cons .passos b{color:var(--tinta)}
+.cons .aviso{font-size:13.5px;color:var(--suave);margin-top:4px}
+ul.check{margin:4px 0;padding-left:20px;font-size:16px}
+ul.check li{margin:4px 0}
+.termino{text-align:right;color:var(--suave);margin-top:10px;font-size:15px}
+/* Barra de presidir */
+.barra{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--barra);color:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none;box-shadow:0 -3px 12px rgba(0,0,0,.25)}
+body.presidir .barra{display:block}
+.barra .in{max-width:920px;margin:0 auto;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.barra .rel{font-variant-numeric:tabular-nums;font-size:46px;font-weight:800;line-height:1;min-width:3.6em;text-align:center;padding:6px 10px;border-radius:12px;background:rgba(255,255,255,.08)}
+.barra .rel.alerta{background:var(--alerta)} .barra .rel.estouro{background:var(--erro)} .barra .rel.pausa{opacity:.6}
+.barra .info{min-width:0}
+.barra .info .agora{font-weight:700;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barra .info .status{font-size:14px;opacity:.85;margin-top:2px}
+.barra .info .status b.adi{color:#8fe3b0} .barra .info .status b.atr{color:#ffb4a8}
+.barra .bt{display:flex;gap:8px}
+.barra .bt button{width:58px;height:58px;border-radius:14px;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:24px;display:grid;place-items:center}
+.barra .bt button.prox{background:#fff;color:var(--barra);width:74px}
+.barra .bt svg{width:28px;height:28px}
+/* Painéis (modais) */
+.painel{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:4vh 12px;overflow:auto}
+.painel.aberto{display:flex}
+.painel .caixa{background:var(--card);border-radius:16px;max-width:720px;width:100%;padding:18px 20px 22px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.painel h2{margin:0 0 12px;font-size:22px;display:flex;align-items:center}
+.painel h2 button{margin-left:auto;border:0;background:var(--campo);border-radius:10px;width:44px;height:44px;font-size:22px}
+.painel h3{font-size:16px;margin:18px 0 8px;color:var(--suave);text-transform:uppercase;letter-spacing:.05em}
+.campoform{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--linha)}
+.campoform label{font-weight:600}
+.campoform small{display:block;color:var(--suave);font-weight:400;font-size:13.5px}
+.campoform input[type=number],.campoform input[type=time],.campoform select{padding:8px 10px;border:1.5px solid var(--linha);border-radius:8px;background:var(--campo);width:7.5em}
+.campoform input[type=checkbox]{width:24px;height:24px}
+.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:700;background:var(--campo);border:1.5px solid var(--linha);min-height:46px}
+.btn.prim{background:var(--fala-bd);color:#fff;border-color:transparent}
+.btn.perigo{color:var(--erro)}
+.lista-ap{list-style:none;padding:0;margin:8px 0}
+.lista-ap li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha)}
+.lista-ap li .q{color:var(--suave);font-size:14px}
+.lista-ap li button{margin-left:auto}
+.msg{padding:10px 12px;border-radius:10px;margin:10px 0;font-size:15px}
+.msg.ok{background:color-mix(in srgb, var(--ok) 15%, transparent)} .msg.erro{background:color-mix(in srgb, var(--erro) 15%, transparent)}
+.drop{border:2px dashed var(--linha);border-radius:12px;padding:18px;text-align:center;color:var(--suave)}
+.licoes-tabs{display:flex;gap:8px;margin-bottom:10px}
+.licoes-tabs button{flex:1}
+.licoes-tabs button.on{background:var(--fala-bd);color:#fff;border-color:transparent}
+.lic-item{border:1px solid var(--linha);border-radius:10px;padding:10px 12px;margin:8px 0}
+.lic-item h4{margin:0 0 4px;font-size:16.5px}
+.lic-item p{margin:2px 0;color:var(--suave);font-size:14.5px}
+.lic-item ol,.lic-item ul{margin:4px 0;padding-left:20px;font-size:15px}
+.vazio{text-align:center;padding:40px 16px;color:var(--suave)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.on{opacity:1}
+body.presidir .toast{bottom:120px}
+@media (max-width:640px){
+  .bloco .hora{width:46px;font-size:16px} .nota-sc,.dica{margin-left:0}
+  .barra .rel{font-size:36px} .barra .bt button{width:50px;height:50px}
+  header .marca small{display:none}
+}
+@media print{
+  header.topo,.barra,.painel,.opcoes,.lembretes,.noprint{display:none!important}
+  body{background:#fff;font-size:12pt} main{padding:0;max-width:none}
+  .bloco{break-inside:avoid;border:0;border-bottom:1px solid #ddd;border-radius:0;margin:0;padding:6px 0}
+  .cabsem{border:0;padding:0}
+  input.campo{border:0;border-bottom:1px solid #888;border-radius:0;background:none}
+}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><span data-t="app">Roteiro do Presidente</span><small data-t="appsub">Reunião Vida e Ministério</small></div>
+  <div class="navsem">
+    <button id="semAnt" aria-label="Semana anterior">‹</button>
+    <select id="selSemana" aria-label="Semana"></select>
+    <button id="semProx" aria-label="Próxima semana">›</button>
+  </div>
+  <div class="lang"><button data-lang="pt">PT</button><button data-lang="es">ES</button></div>
+  <button class="btop" id="btPresidir"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span data-t="presidir">Presidir</span></button>
+  <button class="btop" id="btLicoes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M20 17v4H6.5A2.5 2.5 0 0 1 4 18.5"/></svg><span data-t="licoes">Lições</span></button>
+  <button class="btop" id="btApostilas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v3h16v-3"/></svg><span data-t="apostilas">Apostilas</span></button>
+  <button class="btop" id="btConfig" aria-label="Configurações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+</header>
+
+<main id="main"></main>
+
+<div class="barra" id="barra"><div class="in">
+  <div class="rel" id="relogio">0:00</div>
+  <div class="info"><div class="agora" id="agoraTit"></div><div class="status" id="agoraStatus"></div></div>
+  <div class="bt">
+    <button id="bAnt" aria-label="Voltar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+    <button id="bPausa" aria-label="Pausar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
+    <button id="bProx" class="prox" aria-label="Avançar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.6 16.6L10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></button>
+  </div>
+</div></div>
+
+<div class="painel" id="pConfig"><div class="caixa"></div></div>
+<div class="painel" id="pApostilas"><div class="caixa"></div></div>
+<div class="painel" id="pLicoes"><div class="caixa"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/*__PARSER__*/
+</script>
+<script>
+/*__LICOES__*/
+</script>
+<script>
+const SEMANAS_EMBUTIDAS = /*__SEMANAS__*/[];
+</script>
+<script>
+'use strict';
+/* =================== Textos =================== */
+const T = {
+ pt: {
+  app:'Roteiro do Presidente', appsub:'Reunião Vida e Ministério', presidir:'Presidir', sair:'Sair', licoes:'Lições', apostilas:'Apostilas',
+  meeting:'Nossa Vida e Ministério Cristão',
+  sec:{tesouros:'Tesouros da Palavra de Deus', ministerio:'Faça Seu Melhor no Ministério', vida:'Nossa Vida Cristã'},
+  normal:'Semana normal', sc:'Semana com visita do superintendente de circuito',
+  visitaSC:'Visita do SC', salas:'Salas adicionais', inicio:'Início', imprimir:'Imprimir',
+  lembretes_t:'Lembretes do presidente',
+  lembretes:['Nenhuma parte passa do tempo — nem os seus comentários. Entre as partes, seja bem breve.',
+    'Quem passar do tempo recebe conselho em particular (você ou o conselheiro assistente).',
+    'Você pode anunciar de um microfone de pedestal enquanto o próximo vai para a tribuna, e ficar sentado no palco durante a Leitura da Bíblia e o Faça Seu Melhor no Ministério.',
+    'Não anuncie antes da parte qual é a lição do estudante.',
+    'A reunião inteira, com cânticos e orações, dura 1 hora e 45 minutos.'],
+  cantico_oracao:'Cântico {n} e oração', cantico:'Cântico {n}',
+  abre_fala:'Bem-vindos à reunião {meeting}. Vamos começar com o cântico {n}. Depois, o irmão {f} fará a oração.',
+  f_oracao:'oração', ci_t:'Comentários iniciais',
+  ci_fala:'Nesta semana, a leitura da Bíblia é de {leitura}. Vamos ver o tema “{t1}”{tv}.', ci_tv:' e, em Nossa Vida Cristã, “{t}”',
+  ci_instr:'Crie expectativa e destaque 1 ou 2 pontos que vão ser de maior benefício para a congregação.',
+  f_pontos:'pontos a destacar',
+  disc_fala:'Agora o irmão {f} vai apresentar o discurso “{t}”.', f_orador:'orador',
+  joias_fala:'O irmão {f} vai dirigir a parte “{t}”.', f_dirigente:'dirigente',
+  salas_ida_t:'Salas adicionais — saída dos estudantes',
+  salas_ida_fala:'Os estudantes que têm parte na sala B podem se dirigir agora para lá.',
+  salas_ida_instr:'Convide os estudantes depois de “Joias espirituais”. A sala B tem dirigente próprio, que dá os elogios e conselhos lá.',
+  f_dir_b:'dirigente da sala B', salas_volta_t:'Salas adicionais — retorno',
+  salas_volta_instr:'Os estudantes da sala B voltam aos seus lugares depois da última parte de estudante.',
+  salas_sc:'Sem salas adicionais nesta semana: durante a visita do SC nenhuma parte de estudante no idioma da congregação é feita em salas adicionais.',
+  leit_fala:'A Leitura da Bíblia desta semana é {d}, e será feita por {f}.',
+  f_estudante:'estudante', f_ajudante:'ajudante', sala_b:'Sala B', estudante:'estudante',
+  est_fala:'Agora vamos ver a parte “{t}”, com {f1} e {f2}.',
+  est_disc_fala:'Agora {f} vai apresentar um discurso com o tema “{tema}”.', est_disc_fala2:'Agora {f} vai apresentar um discurso.',
+  cena:'Cena', parte:'Parte',
+  cons_t:'Elogios e conselhos', cons_min:'1 min',
+  cons_passos:'<b>1.</b> Elogie com sinceridade. <b>2.</b> Se quiser, diga a lição designada. <b>3.</b> Explique por que se saiu bem, ou com bondade por que vale a pena revisar a lição e como.',
+  cons_obs:'Outros conselhos podem ser dados em particular depois da reunião.',
+  f_notas:'anotações para o estudante', ponto:'Ponto', licao:'Lição', aprendemos:'O que aprendemos', outros:'Ver os outros pontos da lição',
+  min_tip:'Dica: fique sentado no palco durante esta seção para economizar tempo.',
+  meio_fala:'Vamos cantar agora o cântico {n}.',
+  consid_fala:'A seguir, o irmão {f} vai considerar a parte “{t}”.',
+  consid_obs:'Ancião ou servo ministerial qualificado.',
+  oqvd_obs:'Consideração feita pelo presidente, outro ancião ou servo ministerial qualificado; sem elogios e conselhos.',
+  nec_fala:'Agora o irmão {f} vai considerar as necessidades locais.', nec_obs:'Parte feita por um ancião.',
+  ebc_fala:'Agora teremos o {t}, dirigido pelo irmão {f1}. O leitor será o irmão {f2}.', f_leitor:'leitor',
+  ebc_instr:'Se a reunião estiver atrasada, você pode orientar que o estudo seja reduzido; o dirigente decide como (por ex., não ler alguns parágrafos).',
+  cf_t:'Comentários finais',
+  cf_itens:['Revise os pontos práticos da reunião (se der tempo, peça que a assistência comente o que achou mais útil).',
+    'Visão geral da próxima semana: {prox}',
+    'Se sobrar tempo, diga o nome dos estudantes que terão parte na próxima semana.',
+    'Leia anúncios e cartas aqui. Limpeza e saídas de campo vão para o quadro de anúncios.'],
+  prox_sem:'(importe a apostila seguinte para ver a próxima semana)',
+  cf_aviso:'Se os 3 minutos não forem suficientes para anúncios ou cartas, peça antes da reunião que os irmãos de Nossa Vida Cristã reduzam suas partes.',
+  f_anuncios:'anúncios / cartas',
+  fim_fala:'Vamos terminar com o cântico {n} e a oração do irmão {f}.',
+  sc_cf_t:'Comentários finais (antes do discurso de serviço)',
+  sc_cf_fala:'Agora vamos ouvir o discurso de serviço do nosso superintendente de circuito, o irmão {f}.', f_sc:'nome do SC',
+  sc_disc_t:'Discurso de serviço — superintendente de circuito', sc_disc_obs:'Substitui o Estudo bíblico de congregação.',
+  sc_fim_t:'Cântico escolhido pelo SC e oração',
+  sc_fim_obs:'O superintendente de circuito encerra a reunião com um cântico escolhido por ele. Ele pode convidar outro irmão para a oração.',
+  f_cantico:'cântico', termino:'Término previsto',
+  apA:'Apêndice A', obsDiscApA:'',
+  // presidir
+  pausado:'pausado', agora:'agora', usarSair:'Para encerrar, toque em “Sair”.', salvoErro:'O arquivo não foi salvo.', previsto:'previsto', adiantado:'adiantado', atrasado:'atrasado', noHorario:'no horário', fim:'Fim da reunião',
+  semMin:'sem tempo definido',
+  // painéis
+  config:'Configurações', idioma:'Idioma', horaIni:'Horário de início', abertura:'Cântico e oração iniciais (min)', canticoMeio:'Cântico do meio (min)',
+  som:'Aviso sonoro ao fim do tempo', vibrar:'Vibrar ao fim do tempo', tela:'Manter a tela ligada ao presidir', tema:'Tema', temaAuto:'Automático', temaClaro:'Claro', temaEscuro:'Escuro',
+  backup:'Cópia de segurança', exportar:'Exportar dados', importarBk:'Importar dados', limparSem:'Limpar nomes desta semana',
+  backupInfo:'Salva nomes, anotações, configurações e apostilas importadas num arquivo.',
+  ap_t:'Apostilas', ap_info:'Importe o PDF da apostila (Nossa Vida e Ministério Cristão), em português ou espanhol. O app identifica o idioma e as semanas sozinho.',
+  ap_escolher:'Escolher PDF da apostila', ap_internet: (typeof window.AndroidApp !== 'undefined') ? 'Pode escolher mais de um arquivo de uma vez.' : 'A leitura do PDF precisa de internet só no momento da importação.',
+  ap_lendo:'Lendo {f}…', ap_ok:'{n} semanas importadas de {f} ({i}).', ap_erro:'Não foi possível ler {f}: {e}', ap_nada:'Nenhuma semana encontrada em {f}.',
+  ap_lista:'Apostilas carregadas', semanas:'semanas', ap_rem:'Remover', ap_emb:'incluída no app', ap_imp:'importada',
+  lic_t:'Pontos das lições', lic_th:'Melhore (th)', lic_lmd:'Ame as Pessoas (lmd)', lic_prov:'',
+  vazio:'Nenhuma semana em {i}. Importe a apostila em “Apostilas”.',
+  confLimpar:'Apagar os nomes e anotações desta semana?', limpo:'Semana limpa.', salvo:'Dados exportados.', importado:'Dados importados.',
+ },
+ es: {
+  app:'Guion del presidente', appsub:'Reunión Vida y Ministerio', presidir:'Presidir', sair:'Salir', licoes:'Lecciones', apostilas:'Guías',
+  meeting:'Vida y Ministerio Cristianos',
+  sec:{tesouros:'Tesoros de la Biblia', ministerio:'Seamos mejores maestros', vida:'Nuestra vida cristiana'},
+  normal:'Semana normal', sc:'Semana con visita del superintendente de circuito',
+  visitaSC:'Visita del SC', salas:'Salas auxiliares', inicio:'Inicio', imprimir:'Imprimir',
+  lembretes_t:'Recordatorios para el presidente',
+  lembretes:['Ninguna parte se pasa del tiempo, ni siquiera sus comentarios. Entre las partes, sea muy breve.',
+    'Quien se pase del tiempo recibe consejo en privado (usted o el consejero auxiliar).',
+    'Puede anunciar desde un micrófono de pie mientras el siguiente va a la plataforma, y quedarse sentado en la plataforma durante la Lectura de la Biblia y Seamos mejores maestros.',
+    'No anuncie antes de la parte cuál es la lección del estudiante.',
+    'Toda la reunión, con canciones y oraciones, dura 1 hora y 45 minutos.'],
+  cantico_oracao:'Canción {n} y oración', cantico:'Canción {n}',
+  abre_fala:'Bienvenidos a la reunión {meeting}. Empecemos con la canción {n}. Después, el hermano {f} hará la oración.',
+  f_oracao:'oración', ci_t:'Palabras de introducción',
+  ci_fala:'Esta semana leemos {leitura}. Veremos el tema «{t1}»{tv}.', ci_tv:' y, en Nuestra vida cristiana, «{t}»',
+  ci_instr:'Despierte el interés y destaque 1 o 2 puntos que más beneficiarán a la congregación.',
+  f_pontos:'puntos que destacar',
+  disc_fala:'Ahora el hermano {f} presentará el discurso «{t}».', f_orador:'orador',
+  joias_fala:'El hermano {f} dirigirá la parte «{t}».', f_dirigente:'conductor',
+  salas_ida_t:'Salas auxiliares — salida de los estudiantes',
+  salas_ida_fala:'Los estudiantes que tienen asignación en la sala B pueden pasar ahora a esa sala.',
+  salas_ida_instr:'Invite a los estudiantes después de «Busquemos perlas escondidas». La sala B tiene su propio consejero, que da allí los elogios y consejos.',
+  f_dir_b:'consejero de la sala B', salas_volta_t:'Salas auxiliares — regreso',
+  salas_volta_instr:'Los estudiantes de la sala B vuelven a sus asientos después de la última asignación de estudiante.',
+  salas_sc:'Sin salas auxiliares esta semana: durante la visita del SC ninguna asignación de estudiante en el idioma de la congregación se hace en salas auxiliares.',
+  leit_fala:'La Lectura de la Biblia de esta semana es {d}, y la hará {f}.',
+  f_estudante:'estudiante', f_ajudante:'ayudante', sala_b:'Sala B', estudante:'estudiante',
+  est_fala:'Ahora veremos la parte «{t}», con {f1} y {f2}.',
+  est_disc_fala:'Ahora {f} presentará un discurso con el título «{tema}».', est_disc_fala2:'Ahora {f} presentará un discurso.',
+  cena:'Escena', parte:'Parte',
+  cons_t:'Elogios y consejos', cons_min:'1 min',
+  cons_passos:'<b>1.</b> Elogie con sinceridad. <b>2.</b> Si desea, diga la lección asignada. <b>3.</b> Explique por qué lo hizo bien, o con bondad por qué conviene repasar la lección y cómo.',
+  cons_obs:'Otros consejos pueden darse en privado después de la reunión.',
+  f_notas:'notas para el estudiante', ponto:'Punto', licao:'Lección', aprendemos:'Lo que aprendemos', outros:'Ver los otros puntos de la lección',
+  min_tip:'Consejo: quédese sentado en la plataforma durante esta sección para ahorrar tiempo.',
+  meio_fala:'Cantemos ahora la canción {n}.',
+  consid_fala:'A continuación, el hermano {f} analizará la parte «{t}».',
+  consid_obs:'Anciano o siervo ministerial capacitado.',
+  oqvd_obs:'Análisis a cargo del presidente, otro anciano o un siervo ministerial capacitado; sin elogios ni consejos.',
+  nec_fala:'Ahora el hermano {f} analizará las necesidades de la congregación.', nec_obs:'Parte a cargo de un anciano.',
+  ebc_fala:'Ahora tendremos el {t}, dirigido por el hermano {f1}. El lector será el hermano {f2}.', f_leitor:'lector',
+  ebc_instr:'Si la reunión va atrasada, puede indicar que se acorte el estudio; el conductor decide cómo (por ejemplo, no leer algunos párrafos).',
+  cf_t:'Palabras de conclusión',
+  cf_itens:['Repase los puntos prácticos de la reunión (si hay tiempo, pida al auditorio que comente lo que le resultó más útil).',
+    'Vista general de la próxima semana: {prox}',
+    'Si sobra tiempo, mencione a los estudiantes que tendrán asignación la próxima semana.',
+    'Lea aquí anuncios y cartas. Limpieza y reuniones para la predicación van en el tablero de anuncios.'],
+  prox_sem:'(importe la guía siguiente para ver la próxima semana)',
+  cf_aviso:'Si los 3 minutos no alcanzan para anuncios o cartas, pida antes de la reunión que los hermanos de Nuestra vida cristiana acorten sus partes.',
+  f_anuncios:'anuncios / cartas',
+  fim_fala:'Terminaremos con la canción {n} y la oración del hermano {f}.',
+  sc_cf_t:'Palabras de conclusión (antes del discurso de servicio)',
+  sc_cf_fala:'Ahora escucharemos el discurso de servicio de nuestro superintendente de circuito, el hermano {f}.', f_sc:'nombre del SC',
+  sc_disc_t:'Discurso de servicio — superintendente de circuito', sc_disc_obs:'Reemplaza el Estudio bíblico de la congregación.',
+  sc_fim_t:'Canción elegida por el SC y oración',
+  sc_fim_obs:'El superintendente de circuito termina la reunión con una canción que él elige. Puede invitar a otro hermano a hacer la oración.',
+  f_cantico:'canción', termino:'Término previsto',
+  apA:'Apéndice A',
+  pausado:'en pausa', agora:'ahora', usarSair:'Para terminar, toque en «Salir».', salvoErro:'El archivo no se guardó.', previsto:'previsto', adiantado:'adelantado', atrasado:'atrasado', noHorario:'a tiempo', fim:'Fin de la reunión',
+  semMin:'sin tiempo definido',
+  config:'Configuración', idioma:'Idioma', horaIni:'Hora de inicio', abertura:'Canción y oración iniciales (min)', canticoMeio:'Canción intermedia (min)',
+  som:'Aviso sonoro al terminar el tiempo', vibrar:'Vibrar al terminar el tiempo', tela:'Mantener la pantalla encendida al presidir', tema:'Tema', temaAuto:'Automático', temaClaro:'Claro', temaEscuro:'Oscuro',
+  backup:'Copia de seguridad', exportar:'Exportar datos', importarBk:'Importar datos', limparSem:'Borrar nombres de esta semana',
+  backupInfo:'Guarda nombres, notas, configuración y guías importadas en un archivo.',
+  ap_t:'Guías de actividades', ap_info:'Importe el PDF de la guía (Vida y Ministerio Cristianos), en español o portugués. La app detecta el idioma y las semanas.',
+  ap_escolher:'Elegir PDF de la guía', ap_internet: (typeof window.AndroidApp !== 'undefined') ? 'Puede elegir más de un archivo a la vez.' : 'Leer el PDF necesita internet solo al momento de importar.',
+  ap_lendo:'Leyendo {f}…', ap_ok:'{n} semanas importadas de {f} ({i}).', ap_erro:'No se pudo leer {f}: {e}', ap_nada:'No se encontraron semanas en {f}.',
+  ap_lista:'Guías cargadas', semanas:'semanas', ap_rem:'Quitar', ap_emb:'incluida en la app', ap_imp:'importada',
+  lic_t:'Puntos de las lecciones', lic_th:'Mejore (th)', lic_lmd:'Ame a las personas (lmd)', lic_prov:'Traducción provisional: los títulos pueden diferir de la edición en español.',
+  vazio:'No hay semanas en {i}. Importe la guía en «Guías».',
+  confLimpar:'¿Borrar los nombres y notas de esta semana?', limpo:'Semana borrada.', salvo:'Datos exportados.', importado:'Datos importados.',
+ }
+};
+const NOME_IDIOMA = {pt:'português', es:'español'};
+
+/* =================== Ponte com o app Android =================== */
+// No aplicativo Android existe window.AndroidApp; no navegador, não.
+const APP = (typeof window.AndroidApp !== 'undefined') ? window.AndroidApp : null;
+if (APP) document.documentElement.classList.add('no-app');
+
+/* =================== Estado =================== */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem('rp.'+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('rp.'+k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem('rp.'+k); }catch(e){} },
+};
+const CFG_PADRAO = { lang:'pt', inicio:'19:30', abertura:5, meio:4, som:true, vibrar:true, tela:true, tema:'auto' };
+const S = {
+  cfg: Object.assign({}, CFG_PADRAO, LS.get('cfg', {})),
+  importadas: LS.get('importadas', []),   // semanas vindas de PDFs importados
+  removidas: LS.get('removidas', []),     // ids de semanas embutidas que o usuário removeu
+  semanaId: null, presidir: false, passos: [], passo: 0,
+  t: { inicioPasso: 0, pausadoEm: null, acumuladoPausa: 0, avisado: false },
+};
+function salvarCfg(){ LS.set('cfg', S.cfg); }
+function todasSemanas(){
+  const mapa = new Map();
+  for (const s of SEMANAS_EMBUTIDAS) if (!S.removidas.includes(s.id)) mapa.set(s.id, Object.assign({_emb:true}, s));
+  for (const s of S.importadas) mapa.set(s.id, s);
+  return [...mapa.values()].sort((a,b)=> a.inicio.localeCompare(b.inicio));
+}
+function semanasIdioma(){ return todasSemanas().filter(s => s.idioma === S.cfg.lang); }
+function semanaAtual(){ return todasSemanas().find(s => s.id === S.semanaId) || null; }
+function est(id){ return LS.get('sem.'+id, { sc:false, salas:false, v:{} }); }
+function salvarEst(id, e){ LS.set('sem.'+id, e); }
+const tx = () => T[S.cfg.lang];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmt(str, o){ return str.replace(/\{(\w+)\}/g, (m,k)=> o[k] != null ? o[k] : m); }
+function hm(min){ const h = Math.floor(min/60)%24, m = Math.round(min%60); return h + ':' + String(m).padStart(2,'0'); }
+function minDe(hhmm){ const [h,m] = (hhmm||'19:30').split(':').map(Number); return h*60+m; }
+function hojeISO(){ const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+
+function escolherSemanaPadrao(){
+  const lst = semanasIdioma(); if (!lst.length) { S.semanaId = null; return; }
+  const hoje = hojeISO();
+  let alvo = lst.filter(s => s.inicio <= hoje).pop();
+  if (alvo) { const fim = new Date(alvo.inicio); fim.setUTCDate(fim.getUTCDate()+7); if (fim.toISOString().slice(0,10) <= hoje) { const fut = lst.find(s=> s.inicio > hoje); if (fut) alvo = fut; } }
+  S.semanaId = (alvo || lst[0]).id;
+}
+
+/* =================== Montagem do roteiro =================== */
+function campo(k, ph, e){ return `<input class="campo" data-k="${k}" placeholder="${esc(ph)}" value="${esc(e.v[k]||'')}" size="${Math.max(9,(e.v[k]||ph).length+1)}" autocomplete="off">`; }
+function area(k, ph, e){ return `<textarea class="campo" data-k="${k}" placeholder="${esc(ph)}" rows="1">${esc(e.v[k]||'')}</textarea>`; }
+const fala = h => `<div class="fala">${h}</div>`;
+const instr = h => `<div class="instr">${h}</div>`;
+
+function proximaDe(sem){
+  const d = new Date(sem.inicio+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+7);
+  const iso = d.toISOString().slice(0,10);
+  const p = todasSemanas().find(s => s.idioma === sem.idioma && s.inicio === iso);
+  if (!p) return sem.proxima || null;
+  const t1 = p.partes.find(x => x.n === 1), ebc = p.partes.find(x => x.tipo === 'ebc');
+  return { periodo:p.periodo, leitura:p.leitura, tema:t1?t1.titulo:'', vida:p.partes.filter(x=>x.sec==='vida'&&x.tipo!=='ebc').map(x=>x.titulo), ebc: ebc?ebc.materia:'' };
+}
+function textoProxima(px, L){
+  const s = tx();
+  if (!px) return `<i>${s.prox_sem}</i>`;
+  const q = L==='es' ? ['«','»'] : ['“','”'];
+  const vida = px.vida && px.vida.length ? ` · ${esc(s.sec.vida)}: ${px.vida.map(esc).join('; ')}` : '';
+  return `<b>${esc(px.periodo)}</b> · ${esc(px.leitura)} · ${q[0]}${esc(px.tema)}${q[1]}${vida}${px.ebc?' · '+esc(px.ebc):''}`;
+}
+
+function htmlConselho(p, e, L){
+  const s = tx(), lic = p.licao, k = 'p'+p.n;
+  let corpo = '';
+  if (lic && LICOES[lic.pub] && LICOES[lic.pub][lic.n]) {
+    const D = LICOES[lic.pub][lic.n][L] || LICOES[lic.pub][lic.n].pt;
+    if (lic.pub === 'th') {
+      corpo += `<div class="lic">${esc(lic.txt)} — ${esc(D.t)}</div><div class="obj">${esc(D.obj)}</div><ul class="pontos">` +
+        D.p.map((t,i)=>`<li><input type="checkbox" data-k="chk.${k}.${i}" ${e.v['chk.'+k+'.'+i]?'checked':''}><span>${esc(t)}</span></li>`).join('') + '</ul>';
+    } else {
+      const sec = LICOES.secoesLmd[L][LICOES.lmd[lic.n].secao];
+      corpo += `<div class="lic">${esc(lic.txt)} — ${esc(D.t)} <span style="font-weight:500;color:var(--suave)">· ${esc(sec)}</span></div><div class="obj"><b>${s.aprendemos}:</b> ${esc(D.l)}</div>`;
+      const pontos = Object.entries(D.p);
+      const foco = lic.ponto && D.p[lic.ponto] ? [[String(lic.ponto), D.p[lic.ponto]]] : pontos;
+      corpo += '<ul class="pontos">' + foco.map(([n,[t,d]])=>`<li class="${lic.ponto?'destaque':''}"><input type="checkbox" data-k="chk.${k}.${n}" ${e.v['chk.'+k+'.'+n]?'checked':''}><span><b>${s.ponto} ${n} — ${esc(t)}.</b> ${esc(d)}</span></li>`).join('') + '</ul>';
+      if (lic.ponto) corpo += `<details class="outros"><summary>${s.outros}</summary><ul class="pontos">` + pontos.filter(([n])=>+n!==lic.ponto).map(([n,[t,d]])=>`<li><span><b>${s.ponto} ${n} — ${esc(t)}.</b> ${esc(d)}</span></li>`).join('') + '</ul></details>';
+    }
+  } else if (lic) corpo += `<div class="lic">${esc(lic.txt)}</div>`;
+  if (p.tipo === 'discurso_estudante') {
+    if (p.apendiceA) corpo += `<div class="obj">${esc(LICOES.apendiceA[L])}</div>`;
+    else if (/lmd\s+(?:lição|lección)\s+\d+/i.test(p.detalhe) && !/ponto|punto/i.test(p.detalhe)) corpo += `<div class="obj">${esc(LICOES.discursoLicao[L])}</div>`;
+  }
+  return `<div class="cons" id="cons-${p.n}"><div class="ch">${s.cons_t} <span>· ${s.cons_min}</span></div>${corpo}
+    <div class="passos">${s.cons_passos}</div>${area('nota.'+k, s.f_notas, e)}<div class="aviso">${s.cons_obs}</div></div>`;
+}
+
+/* Gera blocos e passos (para o modo Presidir) */
+function montar(sem, e){
+  const s = tx(), L = sem.idioma, q = L==='es'?['«','»']:['“','”'];
+  const sc = !!e.sc, salas = !!e.salas && !sc;
+  const blocos = [];
+  let t = minDe(S.cfg.inicio);
+  const add = (b) => { b.hora = hm(t); b.ini = t; const dur = (b.passos||[]).reduce((a,x)=>a+x.dur,0); t += dur; blocos.push(b); return b; };
+  const partes = sem.partes;
+  const vidaPrim = partes.find(p => p.sec==='vida' && (p.tipo==='consideracao'));
+  add({ id:'abertura', titulo: fmt(s.cantico_oracao,{n:sem.cantico_inicial||'?'}),
+    corpo: fala(fmt(s.abre_fala,{meeting:esc(s.meeting), n:sem.cantico_inicial||'?', f:campo('oracaoIni', s.f_oracao, e)})),
+    passos:[{dur:+S.cfg.abertura||5}] });
+  add({ id:'ci', titulo: s.ci_t, dur:1,
+    corpo: fala(fmt(s.ci_fala,{leitura:esc(sem.leitura), t1:esc((partes.find(p=>p.n===1)||{}).titulo||''), tv: vidaPrim? fmt(s.ci_tv,{t:esc(vidaPrim.titulo.replace(/^[‘’“”'"]+|[‘’“”'"]+$/g,''))}):''})) + instr(s.ci_instr) + area('pontos', s.f_pontos, e),
+    passos:[{dur:1}] });
+  let secAtual = null, ultimaEst = -1;
+  partes.forEach((p,i)=>{ if (['leitura','estudante','discurso_estudante'].includes(p.tipo)) ultimaEst = i; });
+  partes.forEach((p, i) => {
+    if (p.sec !== secAtual) {
+      if (p.sec === 'vida' && salas) add({ id:'salasVolta', cls:'sala', titulo:s.salas_volta_t, corpo: instr(s.salas_volta_instr), passos:[{dur:0}] });
+      secAtual = p.sec;
+      blocos.push({ secao: p.sec });
+      if (p.sec === 'ministerio') blocos.push({ html:`<div class="dica">${s.min_tip}</div>` });
+      if (p.sec === 'vida') add({ id:'meio', titulo: fmt(s.cantico,{n:sem.cantico_meio||'?'}), corpo: fala(fmt(s.meio_fala,{n:sem.cantico_meio||'?'})), passos:[{dur:+S.cfg.meio||4}] });
+    }
+    const k = 'p'+p.n, tit = `${p.n}. ${esc(p.titulo)}`;
+    if (p.tipo === 'discurso') add({ id:k, sec:p.sec, titulo:tit, corpo: fala(fmt(s.disc_fala,{f:campo(k+'.orador', s.f_orador, e), t:esc(p.titulo)})), passos:[{dur:p.min}] });
+    else if (p.tipo === 'joias') {
+      add({ id:k, sec:p.sec, titulo:tit, corpo: fala(fmt(s.joias_fala,{f:campo(k+'.dir', s.f_dirigente, e), t:esc(p.titulo)})), passos:[{dur:p.min}] });
+      if (salas) add({ id:'salasIda', cls:'sala', titulo:s.salas_ida_t, corpo: fala(s.salas_ida_fala)+instr(s.salas_ida_instr)+`<div>${campo('dirB', s.f_dir_b, e)}</div>`, passos:[{dur:0}] });
+      else if (sc) blocos.push({ html:`<div class="nota-sc">${s.salas_sc}</div>` });
+    }
+    else if (['leitura','estudante','discurso_estudante'].includes(p.tipo)) {
+      let corpo;
+      if (p.tipo === 'leitura') corpo = fala(fmt(s.leit_fala,{d:esc(p.passagem||p.detalhe), f:campo(k+'.est', s.f_estudante, e)}));
+      else if (p.tipo === 'estudante') {
+        corpo = fala(fmt(s.est_fala,{t:esc(p.titulo), f1:campo(k+'.est', s.f_estudante, e), f2:campo(k+'.aj', s.f_ajudante, e)}));
+        if (p.cena || p.texto) corpo += instr(`<b>${p.cena? s.cena : s.parte}:</b> ${esc([p.cena, p.texto].filter(Boolean).join('. '))}`);
+      } else {
+        const m = (p.texto||p.detalhe).match(/(?:Tema|Título|Titulo)\s*:\s*(.+?)\.?\s*$/i);
+        corpo = fala(m ? fmt(s.est_disc_fala,{f:campo(k+'.est', s.f_estudante, e), tema:esc(m[1])}) : fmt(s.est_disc_fala2,{f:campo(k+'.est', s.f_estudante, e)}));
+        if (p.texto) corpo += instr(esc(p.texto));
+      }
+      if (salas) corpo += `<div class="linha-b"><b>${s.sala_b}:</b> ${campo(k+'.estB', s.f_estudante, e)} ${p.tipo==='estudante'?campo(k+'.ajB', s.f_ajudante, e):''}</div>`;
+      corpo += htmlConselho(p, e, L);
+      add({ id:k, sec:p.sec, titulo:tit, tag:s.estudante, durTxt:`${p.min} + 1 min`, corpo, passos:[{dur:p.min}, {dur:1, cons:true, rot:s.cons_t}] });
+    }
+    else if (p.tipo === 'consideracao_min') add({ id:k, sec:p.sec, titulo:tit, corpo: fala(fmt(s.consid_fala,{f:campo(k+'.orador', s.f_orador, e), t:esc(p.titulo)})) + (p.texto?instr(esc(p.texto)):'') + instr(s.oqvd_obs), passos:[{dur:p.min}] });
+    else if (p.tipo === 'consideracao') add({ id:k, sec:p.sec, titulo:tit, corpo: fala(fmt(s.consid_fala,{f:campo(k+'.orador', s.f_orador, e), t:esc(p.titulo.replace(/^[‘’“”'"]+|[‘’“”'"]+$/g,''))})) + instr(s.consid_obs), passos:[{dur:p.min}] });
+    else if (p.tipo === 'necessidades') add({ id:k, sec:p.sec, titulo:tit, corpo: fala(fmt(s.nec_fala,{f:campo(k+'.orador', s.f_orador, e)})) + instr(s.nec_obs), passos:[{dur:p.min}] });
+    else if (p.tipo === 'ebc') {
+      if (sc) {
+        add({ id:'scCf', cls:'scmuda', titulo:s.sc_cf_t, corpo: cfLista(sem, L, true) + area('anuncios', s.f_anuncios, e) + fala(fmt(s.sc_cf_fala,{f:campo('sc', s.f_sc, e)})), passos:[{dur:3}] });
+        add({ id:'scDisc', cls:'scmuda', sec:'vida', titulo:s.sc_disc_t, corpo: instr(s.sc_disc_obs), passos:[{dur:30}] });
+        add({ id:'scFim', cls:'scmuda', titulo:s.sc_fim_t, corpo: instr(s.sc_fim_obs) + `<div>${campo('scCantico', s.f_cantico, e)}</div>`, passos:[{dur: Math.max(0, minDe(S.cfg.inicio)+105 - t)}] });
+      } else add({ id:k, sec:p.sec, titulo:tit, corpo: fala(fmt(s.ebc_fala,{t:esc(p.titulo), f1:campo(k+'.dir', s.f_dirigente, e), f2:campo(k+'.leitor', s.f_leitor, e)})) + instr(`${esc(p.materia||p.detalhe)} · ${s.ebc_instr}`), passos:[{dur:p.min}] });
+    }
+  });
+  if (!sc) {
+    add({ id:'cf', titulo:s.cf_t, corpo: cfLista(sem, L, false) + area('anuncios', s.f_anuncios, e) + instr(s.cf_aviso), passos:[{dur:3}] });
+    add({ id:'fim', titulo: fmt(s.cantico_oracao,{n:sem.cantico_final||'?'}), corpo: fala(fmt(s.fim_fala,{n:sem.cantico_final||'?', f:campo('oracaoFim', s.f_oracao, e)})), passos:[{dur: Math.max(0, minDe(S.cfg.inicio)+105 - t)}] });
+  }
+  return { blocos, fim: hm(minDe(S.cfg.inicio)+105) };
+}
+function cfLista(sem, L, sc){
+  const s = tx(), itens = s.cf_itens.map(x => fmt(x,{prox:textoProxima(proximaDe(sem), L)}));
+  return `<ul class="check">${(sc ? [itens[0], itens[1], itens[3]] : itens).map(x=>`<li>${x}</li>`).join('')}</ul>`;
+}
+
+/* =================== Renderização =================== */
+const $ = id => document.getElementById(id);
+function aplicarTextos(){
+  const s = tx();
+  document.documentElement.lang = S.cfg.lang === 'es' ? 'es' : 'pt-BR';
+  document.querySelectorAll('[data-t]').forEach(el => { const k = el.dataset.t; if (k === 'presidir') el.textContent = S.presidir ? s.sair : s.presidir; else if (s[k]) el.textContent = s[k]; });
+  document.querySelectorAll('.lang button').forEach(b => b.classList.toggle('on', b.dataset.lang === S.cfg.lang));
+  document.title = s.app;
+  document.documentElement.dataset.tema = S.cfg.tema === 'auto' ? '' : (S.cfg.tema === 'escuro' ? 'escuro' : 'claro');
+}
+function preencherSeletor(){
+  const sel = $('selSemana'), lst = semanasIdioma();
+  sel.innerHTML = lst.map(x => `<option value="${x.id}">${esc(x.periodo)} · ${esc(x.leitura)}</option>`).join('');
+  if (S.semanaId) sel.value = S.semanaId;
+}
+function render(){
+  aplicarTextos(); preencherSeletor();
+  const s = tx(), sem = semanaAtual(), main = $('main');
+  if (!sem) { main.innerHTML = `<div class="vazio">${fmt(s.vazio,{i:NOME_IDIOMA[S.cfg.lang]})}</div>`; S.passos = []; return; }
+  const e = est(sem.id);
+  const { blocos, fim } = montar(sem, e);
+  let h = `<section class="cabsem"><div class="sup">${esc(s.meeting)} · ${esc(sem.leitura)} · ${esc(sem.periodo)}</div>
+    <h1>${e.sc ? s.sc : s.normal}</h1>
+    <div class="opcoes">
+      <label class="chip ${e.sc?'on':''}"><input type="checkbox" id="opSC" ${e.sc?'checked':''}> ${s.visitaSC}</label>
+      <label class="chip sala ${e.salas&&!e.sc?'on':''} ${e.sc?'trava':''}"><input type="checkbox" id="opSalas" ${e.salas&&!e.sc?'checked':''} ${e.sc?'disabled':''}> ${s.salas}</label>
+      <label class="chip">${s.inicio} <input type="time" id="opInicio" value="${S.cfg.inicio}"></label>
+      <button class="chip noprint" id="opImprimir" type="button">${s.imprimir}</button>
+    </div>
+    <details class="lembretes"><summary>${s.lembretes_t}</summary><ul>${s.lembretes.map(x=>`<li>${x}</li>`).join('')}</ul></details>
+  </section>`;
+  S.passos = [];
+  for (const b of blocos) {
+    if (b.secao) { h += `<div class="secao ${b.secao}">${esc(s.sec[b.secao])}</div>`; continue; }
+    if (b.html) { h += b.html; continue; }
+    const totalDur = b.passos.reduce((a,x)=>a+x.dur,0);
+    const durTxt = b.durTxt || (totalDur ? totalDur + ' min' : '');
+    h += `<div class="bloco ${b.sec||''} ${b.cls||''}" id="b-${b.id}"><div class="hora">${b.hora}</div><div class="cont">
+      <div class="tit">${b.titulo}${b.tag?`<span class="tag">${esc(b.tag)}</span>`:''}${durTxt?`<span class="dur">${durTxt}</span>`:''}</div>${b.corpo}`;
+    if (b.id === 'fim' || b.id === 'scFim') h += `<div class="termino">${s.termino}: <b>${fim}</b> · 1h45</div>`;
+    h += `</div></div>`;
+    let ini = b.ini;
+    b.passos.forEach((p, i) => { S.passos.push({ bloco:b.id, titulo: (p.cons ? p.rot + ' — ' : '') + b.titulo.replace(/<[^>]+>/g,''), dur:p.dur, cons:!!p.cons, ini, consId: p.cons ? 'cons-' + b.id.slice(1) : null }); ini += p.dur; });
+  }
+  main.innerHTML = h;
+  main.querySelectorAll('textarea.campo').forEach(autoAltura);
+  if (S.presidir) marcarPasso(false);
+}
+function autoAltura(t){ t.style.height = 'auto'; t.style.height = (t.scrollHeight + 3) + 'px'; }
+
+/* Edição de campos (delegação) */
+document.addEventListener('input', ev => {
+  const el = ev.target; if (!el.dataset || !el.dataset.k) return;
+  const sem = semanaAtual(); if (!sem) return;
+  const e = est(sem.id);
+  e.v[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+  salvarEst(sem.id, e);
+  if (el.tagName === 'TEXTAREA') autoAltura(el);
+  if (el.tagName === 'INPUT' && el.type !== 'checkbox') el.size = Math.max(9, (el.value || el.placeholder).length + 1);
+});
+document.addEventListener('change', ev => {
+  const el = ev.target, sem = semanaAtual();
+  if (el.id === 'opSC' || el.id === 'opSalas') { const e = est(sem.id); e[el.id==='opSC'?'sc':'salas'] = el.checked; salvarEst(sem.id, e); render(); }
+  if (el.id === 'opInicio' && el.value) { S.cfg.inicio = el.value; salvarCfg(); render(); }
+});
+document.addEventListener('click', ev => { if (ev.target.id === 'opImprimir') imprimir(); });
+function imprimir(){
+  if (APP) { const sem = semanaAtual(); try { APP.imprimir(tx().app + (sem ? ' — ' + sem.periodo : '')); } catch(e){} }
+  else window.print();
+}
+/* Toque num bloco no modo Presidir: pula para ele */
+$('main').addEventListener('click', ev => {
+  if (!S.presidir) return;
+  if (ev.target.closest('input,textarea,summary,button,label,details')) return;
+  const b = ev.target.closest('.bloco'); if (!b) return;
+  const id = b.id.slice(2), cons = ev.target.closest('.cons');
+  const idx = S.passos.findIndex(p => p.bloco === id && (cons ? p.cons : !p.cons));
+  if (idx >= 0 && idx !== S.passo) irPara(idx);
+});
+
+/* =================== Modo Presidir =================== */
+let tick = null, wake = null;
+function agoraMs(){ return Date.now(); }
+function decorrido(){ const t = S.t; const fimRef = t.pausadoEm || agoraMs(); return (fimRef - t.inicioPasso - t.acumuladoPausa) / 1000; }
+function irPara(i){
+  S.passo = Math.max(0, Math.min(S.passos.length - 1, i));
+  S.t = { inicioPasso: agoraMs(), pausadoEm: null, acumuladoPausa: 0, avisado: false };
+  LS.set('presidir', { sem:S.semanaId, passo:S.passo, t:S.t });
+  marcarPasso(true); atualizarBarra();
+}
+function marcarPasso(rolar){
+  document.querySelectorAll('.bloco.atual,.cons.atual').forEach(x => x.classList.remove('atual'));
+  document.querySelectorAll('.bloco.feito').forEach(x => x.classList.remove('feito'));
+  const p = S.passos[S.passo]; if (!p) return;
+  const vistos = new Set(S.passos.slice(0, S.passo).map(x => x.bloco));
+  vistos.forEach(id => { if (id !== p.bloco) { const el = $('b-' + id); if (el) el.classList.add('feito'); } });
+  const el = $('b-' + p.bloco); if (el) el.classList.add('atual');
+  let alvo = el;
+  if (p.cons && p.consId) { const c = $(p.consId); if (c) { c.classList.add('atual'); alvo = c; } }
+  if (rolar && alvo) alvo.scrollIntoView({ behavior:'smooth', block: p.cons ? 'center' : 'start' });
+}
+function atualizarBarra(){
+  const s = tx(), p = S.passos[S.passo]; if (!p) return;
+  const dec = decorrido(), total = p.dur * 60, rest = total - dec;
+  const rel = $('relogio');
+  if (!p.dur) { rel.textContent = '—'; rel.className = 'rel'; }
+  else {
+    const v = Math.abs(rest), mm = Math.floor(v/60), ss = Math.floor(v%60);
+    rel.textContent = (rest < 0 ? '+' : '') + mm + ':' + String(ss).padStart(2,'0');
+    rel.className = 'rel' + (rest < 0 ? ' estouro' : rest <= Math.max(15, total*0.2) ? ' alerta' : '') + (S.t.pausadoEm ? ' pausa' : '');
+    if (rest <= 0 && !S.t.avisado) { S.t.avisado = true; avisar(); }
+  }
+  $('agoraTit').textContent = `${S.passo+1}/${S.passos.length} · ${p.titulo}`;
+  // adiantado / atrasado: compara a hora real com o início previsto do passo + decorrido
+  const agora = new Date(), minAgora = agora.getHours()*60 + agora.getMinutes() + agora.getSeconds()/60;
+  const previsto = p.ini + dec/60, dif = Math.round(minAgora - previsto);
+  const st = Math.abs(dif) > 60 ? `${s.agora} ${hm(minAgora)}` : Math.abs(dif) < 1 ? s.noHorario : (dif > 0 ? `<b class="atr">${s.atrasado} ${dif} min</b>` : `<b class="adi">${s.adiantado} ${-dif} min</b>`);
+  $('agoraStatus').innerHTML = `${s.previsto} ${hm(p.ini)} · ${st}${S.t.pausadoEm ? ' · ' + s.pausado : ''}`;
+}
+function avisar(){
+  if (APP) { try { if (S.cfg.vibrar) APP.vibrar(); if (S.cfg.som) APP.bipe(); } catch(e){} return; }
+  if (S.cfg.vibrar && navigator.vibrate) navigator.vibrate([250,120,250]);
+  if (S.cfg.som) { try { const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6); o.stop(ctx.currentTime + 0.62); } catch(e){} }
+}
+async function manterTela(on){
+  if (APP) { try { APP.manterTela(!!(on && S.cfg.tela)); } catch(e){} return; }
+  try { if (on && S.cfg.tela && 'wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); else if (!on && wake) { await wake.release(); wake = null; } } catch(e){}
+}
+document.addEventListener('visibilitychange', () => { if (S.presidir && document.visibilityState === 'visible') manterTela(true); });
+function alternarPresidir(on){
+  S.presidir = on; document.body.classList.toggle('presidir', on);
+  $('btPresidir').classList.toggle('ativo', on);
+  $('btPresidir').querySelector('svg').innerHTML = on ? '<path d="M6 6h12v12H6z"/>' : '<path d="M8 5v14l11-7z"/>';
+  aplicarTextos();
+  LS.set('presidirAtivo', on ? S.semanaId : null);
+  if (on) {
+    const salvo = LS.get('presidir', null);
+    if (salvo && salvo.sem === S.semanaId && salvo.passo < S.passos.length && (Date.now() - salvo.t.inicioPasso) < 3*3600e3) { S.passo = salvo.passo; S.t = salvo.t; marcarPasso(true); atualizarBarra(); }
+    else irPara(0);
+    clearInterval(tick); tick = setInterval(atualizarBarra, 250); manterTela(true);
+  } else { clearInterval(tick); manterTela(false); document.querySelectorAll('.atual,.feito').forEach(x=>x.classList.remove('atual','feito')); }
+}
+$('btPresidir').onclick = () => alternarPresidir(!S.presidir);
+$('bProx').onclick = () => { if (S.passo < S.passos.length - 1) irPara(S.passo + 1); else toast(tx().fim); };
+$('bAnt').onclick = () => irPara(S.passo - 1);
+$('bPausa').onclick = () => { const t = S.t; if (t.pausadoEm) { t.acumuladoPausa += agoraMs() - t.pausadoEm; t.pausadoEm = null; } else t.pausadoEm = agoraMs(); LS.set('presidir', { sem:S.semanaId, passo:S.passo, t }); atualizarBarra(); };
+
+/* =================== Navegação =================== */
+$('selSemana').onchange = ev => { S.semanaId = ev.target.value; if (S.presidir) alternarPresidir(false); render(); window.scrollTo(0,0); };
+function moverSemana(d){ const lst = semanasIdioma(), i = lst.findIndex(x=>x.id===S.semanaId); const n = lst[i+d]; if (n) { S.semanaId = n.id; if (S.presidir) alternarPresidir(false); render(); window.scrollTo(0,0); } }
+$('semAnt').onclick = () => moverSemana(-1); $('semProx').onclick = () => moverSemana(1);
+document.querySelectorAll('.lang button').forEach(b => b.onclick = () => {
+  if (S.cfg.lang === b.dataset.lang) return;
+  const atual = semanaAtual(); S.cfg.lang = b.dataset.lang; salvarCfg();
+  const par = atual && semanasIdioma().find(x => x.inicio === atual.inicio);
+  if (par) S.semanaId = par.id; else escolherSemanaPadrao();
+  if (S.presidir) alternarPresidir(false);
+  render();
+});
+function toast(m){ const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 2400); }
+
+/* =================== Painéis =================== */
+function abrir(id, html){ const p = $(id); p.querySelector('.caixa').innerHTML = html; p.classList.add('aberto'); }
+function fechar(id){ $(id).classList.remove('aberto'); }
+document.querySelectorAll('.painel').forEach(p => p.addEventListener('click', ev => { if (ev.target === p || ev.target.closest('[data-fechar]')) p.classList.remove('aberto'); }));
+const tituloPainel = t => `<h2>${t}<button data-fechar aria-label="Fechar">×</button></h2>`;
+
+$('btConfig').onclick = () => {
+  const s = tx(), c = S.cfg;
+  abrir('pConfig', tituloPainel(s.config) + `
+    <div class="campoform"><label>${s.idioma}</label><select id="cfLang"><option value="pt">Português</option><option value="es">Español</option></select></div>
+    <div class="campoform"><label>${s.horaIni}</label><input type="time" id="cfInicio" value="${c.inicio}"></div>
+    <div class="campoform"><label>${s.abertura}</label><input type="number" min="1" max="10" id="cfAbertura" value="${c.abertura}"></div>
+    <div class="campoform"><label>${s.canticoMeio}</label><input type="number" min="1" max="10" id="cfMeio" value="${c.meio}"></div>
+    <div class="campoform"><label>${s.som}</label><input type="checkbox" id="cfSom" ${c.som?'checked':''}></div>
+    <div class="campoform"><label>${s.vibrar}</label><input type="checkbox" id="cfVibrar" ${c.vibrar?'checked':''}></div>
+    <div class="campoform"><label>${s.tela}</label><input type="checkbox" id="cfTela" ${c.tela?'checked':''}></div>
+    <div class="campoform"><label>${s.tema}</label><select id="cfTema"><option value="auto">${s.temaAuto}</option><option value="claro">${s.temaClaro}</option><option value="escuro">${s.temaEscuro}</option></select></div>
+    <h3>${s.backup}</h3><p class="instr">${s.backupInfo}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="cfExp">${s.exportar}</button>
+    <label class="btn" style="display:inline-flex;align-items:center">${s.importarBk}<input type="file" id="cfImp" accept=".json,application/json" hidden></label>
+    <button class="btn perigo" id="cfLimpar">${s.limparSem}</button></div>`);
+  $('cfLang').value = c.lang; $('cfTema').value = c.tema;
+  const upd = () => {
+    const novoLang = $('cfLang').value;
+    Object.assign(S.cfg, { inicio: $('cfInicio').value || '19:30', abertura: +$('cfAbertura').value || 5, meio: +$('cfMeio').value || 4,
+      som: $('cfSom').checked, vibrar: $('cfVibrar').checked, tela: $('cfTela').checked, tema: $('cfTema').value });
+    if (novoLang !== S.cfg.lang) { document.querySelector(`.lang button[data-lang="${novoLang}"]`).click(); }
+    salvarCfg(); render();
+  };
+  $('pConfig').querySelectorAll('input:not([type=file]),select').forEach(el => el.addEventListener('change', upd));
+  $('cfExp').onclick = exportar;
+  $('cfImp').onchange = ev => importarBackup(ev.target.files[0]);
+  $('cfLimpar').onclick = () => { const sem = semanaAtual(); if (sem && confirm(tx().confLimpar)) { LS.del('sem.' + sem.id); render(); toast(tx().limpo); } };
+};
+function exportar(){
+  const dados = { versao:1, cfg:S.cfg, importadas:S.importadas, removidas:S.removidas, semanas:{} };
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('rp.sem.')) dados.semanas[k.slice(7)] = JSON.parse(localStorage.getItem(k)); }
+  const nome = 'roteiro-presidente-' + hojeISO() + '.json', json = JSON.stringify(dados);
+  if (APP) { APP.salvarArquivo(nome, 'application/json', json); return; }   // o app pergunta onde salvar
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([json], {type:'application/json'}));
+  a.download = nome; a.click(); toast(tx().salvo);
+}
+async function importarBackup(f){
+  if (!f) return;
+  try { const d = JSON.parse(await f.text());
+    if (d.cfg) S.cfg = Object.assign({}, CFG_PADRAO, d.cfg);
+    if (d.importadas) S.importadas = d.importadas; if (d.removidas) S.removidas = d.removidas;
+    for (const [id, v] of Object.entries(d.semanas || {})) salvarEst(id, v);
+    salvarCfg(); LS.set('importadas', S.importadas); LS.set('removidas', S.removidas);
+    escolherSemanaPadrao(); render(); fechar('pConfig'); toast(tx().importado);
+  } catch(e) { alert(e.message); }
+}
+
+/* Apostilas: importar PDF */
+// No app o pdf.js vem junto (funciona sem internet); no navegador vem da internet.
+const PDFJS = APP ? 'pdfjs/' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+function carregarPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = PDFJS + 'pdf.min.js';
+    sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; ok(window.pdfjsLib); };
+    sc.onerror = () => erro(new Error('pdf.js')); document.head.appendChild(sc); });
+}
+function painelApostilas(msg){
+  const s = tx(), lst = todasSemanas();
+  const grupos = {};
+  for (const x of lst) (grupos[x.idioma] = grupos[x.idioma] || []).push(x);
+  let lista = '';
+  for (const [i, arr] of Object.entries(grupos)) {
+    const porArq = {};
+    for (const x of arr) (porArq[x.origem || '—'] = porArq[x.origem || '—'] || []).push(x);
+    lista += `<h3>${NOME_IDIOMA[i]}</h3><ul class="lista-ap">` + Object.entries(porArq).map(([arq, ws]) =>
+      `<li><div><b>${esc(ws[0].periodo)} → ${esc(ws[ws.length-1].periodo)}</b><div class="q">${ws.length} ${s.semanas} · ${esc(arq)} · ${ws[0]._emb ? s.ap_emb : s.ap_imp}</div></div><button class="btn perigo" data-rem="${ws.map(x=>x.id).join(',')}">${s.ap_rem}</button></li>`).join('') + '</ul>';
+  }
+  abrir('pApostilas', tituloPainel(s.ap_t) + `<p>${s.ap_info}</p>
+    <label class="drop" style="display:block"><b>${s.ap_escolher}</b><br><small>${s.ap_internet}</small><input type="file" id="apFile" accept="application/pdf,.pdf" multiple hidden></label>
+    <div id="apMsg">${msg||''}</div><h3>${s.ap_lista}</h3>${lista}`);
+  $('apFile').onchange = ev => importarPDFs([...ev.target.files]);
+  $('pApostilas').querySelectorAll('[data-rem]').forEach(b => b.onclick = () => {
+    const ids = b.dataset.rem.split(',');
+    S.importadas = S.importadas.filter(x => !ids.includes(x.id));
+    for (const id of ids) if (SEMANAS_EMBUTIDAS.some(x => x.id === id) && !S.removidas.includes(id)) S.removidas.push(id);
+    LS.set('importadas', S.importadas); LS.set('removidas', S.removidas);
+    if (ids.includes(S.semanaId)) escolherSemanaPadrao(); render(); painelApostilas();
+  });
+}
+async function importarPDFs(arquivos){
+  const s = tx(); let msgs = '';
+  for (const f of arquivos) {
+    $('apMsg').innerHTML = msgs + `<div class="msg">${fmt(s.ap_lendo,{f:esc(f.name)})}</div>`;
+    try {
+      const lib = await carregarPdfJs();
+      const pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+      const r = await LeitorApostila.analisarPDF(pdf, f.name);
+      if (!r.semanas.length) { msgs += `<div class="msg erro">${fmt(s.ap_nada,{f:esc(f.name)})}</div>`; continue; }
+      const ids = new Set(r.semanas.map(x => x.id));
+      S.importadas = S.importadas.filter(x => !ids.has(x.id)).concat(r.semanas);
+      S.removidas = S.removidas.filter(id => !ids.has(id));
+      LS.set('importadas', S.importadas); LS.set('removidas', S.removidas);
+      msgs += `<div class="msg ok">${fmt(s.ap_ok,{n:r.semanas.length, f:esc(f.name), i:NOME_IDIOMA[r.idioma]})}</div>`;
+    } catch (e) { msgs += `<div class="msg erro">${fmt(s.ap_erro,{f:esc(f.name), e:esc(e.message||e)})}</div>`; }
+  }
+  if (!semanaAtual()) escolherSemanaPadrao();
+  render(); painelApostilas(msgs);
+}
+$('btApostilas').onclick = () => painelApostilas();
+
+/* Lições */
+function painelLicoes(aba){
+  const s = tx(), L = S.cfg.lang; aba = aba || 'th';
+  let h = tituloPainel(s.lic_t) + `<div class="licoes-tabs"><button class="btn ${aba==='th'?'on':''}" data-aba="th">${s.lic_th}</button><button class="btn ${aba==='lmd'?'on':''}" data-aba="lmd">${s.lic_lmd}</button></div>`;
+  if (L === 'es' && s.lic_prov) h += `<p class="instr">${s.lic_prov}</p>`;
+  if (aba === 'th') for (const [n, d] of Object.entries(LICOES.th)) { const D = d[L]; h += `<div class="lic-item"><h4>${n}. ${esc(D.t)}</h4><p>${esc(D.obj)}</p><ul>${D.p.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`; }
+  else for (const [n, d] of Object.entries(LICOES.lmd)) { const D = d[L]; h += `<div class="lic-item"><h4>${n}. ${esc(D.t)} <span style="font-weight:500;color:var(--suave)">· ${esc(LICOES.secoesLmd[L][d.secao])}</span></h4><p><b>${s.aprendemos}:</b> ${esc(D.l)}</p><ul>${Object.entries(D.p).map(([k,[t,x]])=>`<li><b>${s.ponto} ${k} — ${esc(t)}.</b> ${esc(x)}</li>`).join('')}</ul></div>`; }
+  abrir('pLicoes', h);
+  $('pLicoes').querySelectorAll('[data-aba]').forEach(b => b.onclick = () => painelLicoes(b.dataset.aba));
+}
+$('btLicoes').onclick = () => painelLicoes();
+
+/* =================== Integração com o app =================== */
+// Botão "voltar" do Android: fecha painéis; durante o modo Presidir não sai do app.
+window.voltarApp = function(){
+  const aberto = document.querySelector('.painel.aberto');
+  if (aberto) { aberto.classList.remove('aberto'); return 'ok'; }
+  if (S.presidir) { toast(tx().usarSair); return 'ok'; }
+  return 'sair';
+};
+window.aoSalvarArquivo = ok => toast(ok ? tx().salvo : tx().salvoErro);
+
+/* =================== Início =================== */
+escolherSemanaPadrao();
+(function retomar(){
+  // Se o app foi fechado no meio da reunião, volta direto para o modo Presidir
+  const ativo = LS.get('presidirAtivo', null), salvo = LS.get('presidir', null);
+  if (ativo && salvo && salvo.sem === ativo && (Date.now() - salvo.t.inicioPasso) < 3*3600e3 && todasSemanas().some(x => x.id === ativo)) {
+    const sem = todasSemanas().find(x => x.id === ativo);
+    if (sem.idioma !== S.cfg.lang) { S.cfg.lang = sem.idioma; salvarCfg(); }
+    S.semanaId = ativo; render(); alternarPresidir(true);
+  } else render();
+})();
+</script>
+</body>
+</html>

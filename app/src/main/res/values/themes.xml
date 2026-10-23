@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="barra">#1F3B4D</color>
+    <color name="fundo">#F4F5F7</color>
+    <color name="icone_fundo">#1F3B4D</color>
+    <style name="Tema" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/fundo</item>
+        <item name="android:colorPrimary">@color/barra</item>
+        <item name="android:colorPrimaryDark">@color/barra</item>
+        <item name="android:colorAccent">#3B6FB6</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
