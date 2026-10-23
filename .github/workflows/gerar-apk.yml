@@ -22,7 +22,7 @@ jobs:
       - name: Compilar o APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
+          ./gradlew --no-daemon testDebugUnitTest assembleRelease
 
       - name: Preparar o arquivo
         id: apk
