@@ -3,6 +3,11 @@ package app.roteiro.presidente.nucleo
 /** Textos da interface em português e espanhol (gerado a partir da versão HTML + textos do app nativo). */
 object Textos {
     private val pt: Map<String, String> = mapOf(
+        "reuniao" to "Reunião",
+        "faltam" to "faltam {n} min",
+        "iniciar" to "Iniciar",
+        "emAndamento" to "Contando",
+        "resultadoImp" to "Importação de arquivos",
         "geral" to "Geral",
         "arquivos" to "Arquivos",
         "arq_info" to "Importe aqui os arquivos baixados do jw.org. O app reconhece sozinho o tipo e o idioma: apostila Vida e Ministério (PDF), brochuras “Melhore Sua Leitura e Seu Ensino” (th) e “Ame as Pessoas” (lmd) em PDF, e o cancioneiro “Cante de Coração para Jeová” (.jwpub). Pode escolher vários de uma vez.",
@@ -179,6 +184,11 @@ object Textos {
     )
     private val ptSecoes: Map<String, String> = mapOf("tesouros" to "Tesouros da Palavra de Deus", "ministerio" to "Faça Seu Melhor no Ministério", "vida" to "Nossa Vida Cristã")
     private val es: Map<String, String> = mapOf(
+        "reuniao" to "Reunión",
+        "faltam" to "faltan {n} min",
+        "iniciar" to "Iniciar",
+        "emAndamento" to "Contando",
+        "resultadoImp" to "Importación de archivos",
         "geral" to "General",
         "arquivos" to "Archivos",
         "arq_info" to "Importe aquí los archivos descargados de jw.org. La app reconoce sola el tipo y el idioma: guía Vida y Ministerio (PDF), folletos «Mejore su lectura y su enseñanza» (th) y «Ame a las personas» (lmd) en PDF, y el cancionero «Cantemos con gozo a Jehová» (.jwpub). Puede elegir varios a la vez.",

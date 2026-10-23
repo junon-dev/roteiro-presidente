@@ -52,7 +52,7 @@ class Importador(private val ctx: Context) {
                 else -> Importado.Falha("formato não reconhecido")
             }
         } catch (e: Throwable) {
-            Importado.Falha(e.message ?: e.javaClass.simpleName)
+            Importado.Falha((e.javaClass.simpleName + ": " + (e.message ?: "")).take(300))
         }
     }
 
@@ -124,10 +124,14 @@ class Importador(private val ctx: Context) {
         val titulos = LinkedHashMap<String, String>()
         try {
             SQLiteDatabase.openDatabase(tmp.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-                db.rawQuery("SELECT ChapterNumber, Title FROM Document WHERE ChapterNumber IS NOT NULL ORDER BY ChapterNumber", null).use { c ->
+                // O número vem em ChapterNumber; se faltar, tenta o início do título ("1. Título")
+                val rxNum = Regex("^\\s*(\\d{1,3})\\s*[.)\\-–]?\\s+(.+)$")
+                db.rawQuery("SELECT ChapterNumber, Title FROM Document ORDER BY DocumentId", null).use { c ->
                     while (c.moveToNext()) {
-                        val n = c.getInt(0)
-                        val t = (c.getString(1) ?: "").replace(Regex("^\\s*\\d+\\s*[.)\\-–]?\\s*"), "").trim()
+                        val bruto = (c.getString(1) ?: "").trim()
+                        val m = rxNum.find(bruto)
+                        val n = if (!c.isNull(0)) c.getInt(0) else m?.groupValues?.get(1)?.toIntOrNull() ?: continue
+                        val t = (if (m != null && m.groupValues[1].toIntOrNull() == n) m.groupValues[2] else bruto).trim()
                         if (n > 0 && t.isNotEmpty() && !titulos.containsKey(n.toString())) titulos[n.toString()] = t
                     }
                 }

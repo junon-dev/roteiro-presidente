@@ -47,6 +47,8 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     var agora by mutableLongStateOf(System.currentTimeMillis())
     var ocupado by mutableStateOf<String?>(null)
         private set
+    /** Resultado da última importação (fica na tela até o usuário fechar). */
+    var resultado by mutableStateOf<String?>(null)
 
     private val canalMsg = Channel<String>(Channel.BUFFERED)
     val mensagens = canalMsg.receiveAsFlow()
@@ -169,7 +171,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
             }
             ocupado = null
             if (semanaAtual() == null) escolherSemanaPadrao()
-            avisar(msgs.joinToString("\n"))
+            resultado = msgs.joinToString("\n\n")
         }
     }
 
@@ -223,9 +225,10 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     fun iniciarPresidir(totalPassos: Int) {
         val id = semanaId ?: return
         val salvo = dados.presidir
+        val agoraMs = System.currentTimeMillis()
         val novo = if (salvo != null && salvo.sem == id && salvo.passo < totalPassos &&
-            System.currentTimeMillis() - salvo.inicioPasso < 3 * 3600_000L) salvo.copy(ativo = true)
-        else EstadoPresidir(id, 0, System.currentTimeMillis(), null, 0, true)
+            agoraMs - salvo.inicioPasso < 3 * 3600_000L) salvo.copy(ativo = true, inicioReuniao = salvo.inicioReuniao.takeIf { it > 0 } ?: salvo.inicioPasso)
+        else EstadoPresidir(id, 0, agoraMs, null, 0, true, inicioReuniao = agoraMs)
         avisado = false
         mudar { it.copy(presidir = novo) }
     }
@@ -247,6 +250,12 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         val p = dados.presidir ?: return 0.0
         val fimRef = p.pausadoEm ?: agora
         return (fimRef - p.inicioPasso - p.acumuladoPausa) / 1000.0
+    }
+    /** Segundos desde o início da reunião (não para com a pausa da parte). */
+    fun decorridoReuniao(): Double {
+        val p = dados.presidir ?: return 0.0
+        val ini = p.inicioReuniao.takeIf { it > 0 } ?: p.inicioPasso
+        return (agora - ini) / 1000.0
     }
     /** Chamado a cada atualização do relógio: dispara o aviso quando o tempo acaba. */
     fun verificarFimDoTempo(durMin: Int) {

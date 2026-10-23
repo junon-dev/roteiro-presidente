@@ -123,8 +123,11 @@ fun TelaPrincipal(vm: AppVM) {
         rot?.itens?.forEachIndexed { i, it -> if (it is ItemRoteiro.BlocoR) m[it.b.id] = i + 1 }
         m
     }
+    // Rola até a parte só quando ela muda pelos botões da barra (o ▶ é tocado na própria parte, que já está na tela)
+    var rolar by remember { mutableStateOf(true) }
     LaunchedEffect(passoIdx, presidindo) {
-        if (presidindo && passo != null) indiceBloco[passo.bloco]?.let { lista.animateScrollToItem(it) }
+        if (presidindo && passo != null && rolar) indiceBloco[passo.bloco]?.let { lista.animateScrollToItem(it) }
+        rolar = false
     }
 
     Scaffold(
@@ -132,10 +135,10 @@ fun TelaPrincipal(vm: AppVM) {
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             BarraTopo(vm, aoPresidir = {
-                if (vm.presidindo) vm.pararPresidir() else vm.iniciarPresidir(passos.size)
+                if (vm.presidindo) vm.pararPresidir() else { rolar = true; vm.iniciarPresidir(passos.size) }
             }, aoPainel = { painel = it })
         },
-        bottomBar = { if (presidindo && passo != null) BarraPresidir(vm, passos, passoIdx) },
+        bottomBar = { if (presidindo && passo != null) BarraPresidir(vm, passos, passoIdx) { i -> rolar = true; vm.irPasso(i, passos.size) } },
     ) { pad ->
         if (sem == null || rot == null || est == null) {
             Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
@@ -176,7 +179,7 @@ fun TelaPrincipal(vm: AppVM) {
                                 atual = ehAtual && passo?.cons == false,
                                 consAtual = ehAtual && passo?.cons == true,
                                 feito = b.id in feitos,
-                                aoTocar = if (presidindo) { cons ->
+                                aoIniciar = if (presidindo) { cons ->
                                     val alvo = passos.indexOfFirst { it.bloco == b.id && it.cons == cons }
                                         .takeIf { it >= 0 } ?: passos.indexOfFirst { it.bloco == b.id }
                                     if (alvo >= 0 && alvo != passoIdx) vm.irPasso(alvo, passos.size)
@@ -193,6 +196,14 @@ fun TelaPrincipal(vm: AppVM) {
         "licoes" -> PainelLicoes(vm) { painel = null }
         "config" -> PainelConfig(vm, aoCanticos = { painel = "canticos" }) { painel = null }
         "canticos" -> PainelCanticos(vm) { painel = "config" }
+    }
+    vm.resultado?.let { msg ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { vm.resultado = null },
+            title = { Text(s["resultadoImp"]) },
+            text = { Text(msg) },
+            confirmButton = { TextButton(onClick = { vm.resultado = null }) { Text("OK") } },
+        )
     }
     vm.ocupado?.let { msg ->
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)).clickable(enabled = true) {}, contentAlignment = Alignment.Center) {
@@ -312,7 +323,7 @@ private fun Cabecalho(vm: AppVM, sc: Boolean, salas: Boolean, aoImprimir: () -> 
 }
 
 @Composable
-private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.Passo>, idx: Int) {
+private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.Passo>, idx: Int, aoMudarPasso: (Int) -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
     val p = passos[idx]
@@ -331,30 +342,45 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
         val v = Math.abs(resta).toLong()
         (if (resta < 0) "+" else "") + "${v / 60}:" + (v % 60).toString().padStart(2, '0')
     }
-    val agora = LocalTime.now()
-    val minAgora = agora.hour * 60 + agora.minute + agora.second / 60.0
-    val dif = Math.round(minAgora - (p.ini + dec / 60.0)).toInt()
+    // Relógio da reunião: corre sempre, desde o início do modo Presidir
+    val reuniao = vm.decorridoReuniao().coerceAtLeast(0.0)
+    val rs = reuniao.toLong()
+    val txtReuniao = "${rs / 3600}:" + ((rs / 60) % 60).toString().padStart(2, '0') + ":" + (rs % 60).toString().padStart(2, '0')
+    val faltam = Math.round(105 - reuniao / 60).toInt()
+    // adiantado/atrasado: compara o tempo real da reunião com o previsto para este ponto do roteiro
+    val previstoMin = (p.ini - Roteiro.minDe(vm.cfg.inicio)) + minOf(dec, total) / 60.0
+    val dif = Math.round(reuniao / 60 - previstoMin).toInt()
     val status = when {
-        Math.abs(dif) > 60 -> "${s["agora"]} ${Roteiro.hm(minAgora.toInt())}"
         Math.abs(dif) < 1 -> s["noHorario"]
         dif > 0 -> "${s["atrasado"]} $dif min"
         else -> "${s["adiantado"]} ${-dif} min"
     }
-    val corStatus = when { Math.abs(dif) > 60 || Math.abs(dif) < 1 -> Color.White; dif > 0 -> Color(0xFFFFB4A8); else -> Color(0xFF8FE3B0) }
+    val corStatus = when { Math.abs(dif) < 1 -> Color.White; dif > 0 -> Color(0xFFFFB4A8); else -> Color(0xFF8FE3B0) }
     Surface(color = c.barra, contentColor = Color.White, shadowElevation = 8.dp) {
         Row(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(txtRel, fontSize = 46.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = if (pausado) 0.6f else 1f),
-                modifier = Modifier.background(corRel, RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 4.dp))
-            Spacer(Modifier.width(14.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(s["parte"].uppercase(), fontSize = 11.sp, letterSpacing = 1.sp, color = Color.White.copy(alpha = 0.7f))
+                Text(txtRel, fontSize = 42.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = if (pausado) 0.6f else 1f),
+                    modifier = Modifier.background(corRel, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 2.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                Text(s["reuniao"].uppercase(), fontSize = 11.sp, letterSpacing = 1.sp, color = Color.White.copy(alpha = 0.7f))
+                Text(txtReuniao, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(if (faltam >= 0) Textos.formatar(s["faltam"], "n" to faltam) else "+${-faltam} min", fontSize = 13.sp,
+                    color = if (faltam < 0) Color(0xFFFFB4A8) else Color.White.copy(alpha = 0.8f))
+            }
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("${idx + 1}/${passos.size} · ${p.titulo}", fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(p.titulo, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text("${s["previsto"]} ${Roteiro.hm(p.ini)} · $status" + if (pausado) " · ${s["pausado"]}" else "",
                     fontSize = 14.sp, color = corStatus)
             }
-            BotaoBarra(onClick = { vm.irPasso(idx - 1, passos.size) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, s["passoAnt"], Modifier.size(30.dp)) }
+            BotaoBarra(onClick = { aoMudarPasso(idx - 1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, s["passoAnt"], Modifier.size(30.dp)) }
             Spacer(Modifier.width(8.dp))
             BotaoBarra(onClick = { vm.pausar() }) {
                 if (pausado) Icon(Icons.Filled.PlayArrow, s["continuar"], Modifier.size(30.dp))
@@ -362,7 +388,7 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
             }
             Spacer(Modifier.width(8.dp))
             BotaoBarra(destaque = true, onClick = {
-                if (idx < passos.size - 1) vm.irPasso(idx + 1, passos.size) else vm.avisar(s["fim"])
+                if (idx < passos.size - 1) aoMudarPasso(idx + 1) else vm.avisar(s["fim"])
             }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, s["proxPasso"], Modifier.size(32.dp), tint = c.barra) }
         }
     }

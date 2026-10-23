@@ -85,4 +85,6 @@ data class EstadoPresidir(
     val pausadoEm: Long? = null,
     val acumuladoPausa: Long = 0,
     val ativo: Boolean = false,
+    /** Quando o presidente começou a reunião (o relógio da reunião não para). */
+    val inicioReuniao: Long = 0,
 )

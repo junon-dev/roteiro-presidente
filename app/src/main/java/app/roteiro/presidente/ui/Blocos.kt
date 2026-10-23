@@ -128,7 +128,7 @@ fun CartaoBloco(
     atual: Boolean,
     consAtual: Boolean,
     feito: Boolean,
-    aoTocar: ((cons: Boolean) -> Unit)?,
+    aoIniciar: ((cons: Boolean) -> Unit)?,
 ) {
     val c = LocalCores.current
     val s = Textos.de(lang)
@@ -139,7 +139,6 @@ fun CartaoBloco(
     var mod = Modifier.fillMaxWidth().padding(vertical = 5.dp)
         .background(fundo, forma)
         .border(if (atual) 3.dp else 1.dp, if (atual) c.falaBorda else c.linha, forma)
-    if (aoTocar != null) mod = mod.clickable { aoTocar(false) }
     Row(mod.alpha(if (feito) 0.6f else 1f).padding(horizontal = 14.dp, vertical = 12.dp)) {
         Text(b.hora, fontWeight = FontWeight.Bold, fontSize = 19.sp, color = c.tinta, modifier = Modifier.width(58.dp))
         Column(Modifier.weight(1f).barraEsquerda(corBarra).padding(start = 14.dp)) {
@@ -157,6 +156,10 @@ fun CartaoBloco(
                 }
                 if (b.durTxt.isNotEmpty()) Text(b.durTxt, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.suave,
                     modifier = Modifier.background(c.campo, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 2.dp))
+                if (aoIniciar != null && b.passos.any { !it.cons }) {
+                    Spacer(Modifier.width(8.dp))
+                    BotaoIniciar(rodando = atual, lang = lang) { aoIniciar(false) }
+                }
             }
             if (!b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
             b.instr.forEach { Instrucao(it) }
@@ -180,7 +183,7 @@ fun CartaoBloco(
             }
             b.areas.forEach { CampoArea(it, ed) }
             if (b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
-            b.conselho?.let { CartaoConselho(it, ed, lang, consAtual, aoTocar?.let { f -> { f(true) } }) }
+            b.conselho?.let { CartaoConselho(it, ed, lang, consAtual, aoIniciar?.let { f -> { f(true) } }) }
             b.termino?.let {
                 Text(buildAnnotatedString { append(s["termino"] + ": "); val i = length; append(it); addStyle(SpanStyle(fontWeight = FontWeight.Bold), i, length); append(" · 1h45") },
                     color = c.suave, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
@@ -190,19 +193,21 @@ fun CartaoBloco(
 }
 
 @Composable
-fun CartaoConselho(k: Conselho, ed: Edicao, lang: String, atual: Boolean, aoTocar: (() -> Unit)?) {
+fun CartaoConselho(k: Conselho, ed: Edicao, lang: String, atual: Boolean, aoIniciar: (() -> Unit)?) {
     val c = LocalCores.current
     val s = Textos.de(lang)
     val forma = RoundedCornerShape(10.dp)
     var mod = Modifier.fillMaxWidth().padding(top = 10.dp)
         .background(c.consFundo, forma)
         .border(if (atual) 3.dp else 1.dp, if (atual) c.ministerio else c.consBorda, forma)
-    if (aoTocar != null) mod = mod.clickable { aoTocar() }
     Column(mod.padding(horizontal = 12.dp, vertical = 10.dp)) {
-        Text(buildAnnotatedString {
-            append(s["cons_t"].uppercase()); val i = length; append(" · " + s["cons_min"])
-            addStyle(SpanStyle(fontWeight = FontWeight.Medium), i, length)
-        }, color = c.ministerio, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, letterSpacing = 0.8.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(buildAnnotatedString {
+                append(s["cons_t"].uppercase()); val i = length; append(" · " + s["cons_min"])
+                addStyle(SpanStyle(fontWeight = FontWeight.Medium), i, length)
+            }, color = c.ministerio, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, letterSpacing = 0.8.sp, modifier = Modifier.weight(1f))
+            if (aoIniciar != null) BotaoIniciar(rodando = atual, lang = lang, cor = c.ministerio) { aoIniciar() }
+        }
         if (k.licao != null) Text(buildAnnotatedString {
             append(k.licao)
             k.licaoTitulo?.let { append(" — $it") }
@@ -268,7 +273,29 @@ fun Dica(texto: String, sc: Boolean) {
         modifier = Modifier.padding(start = 72.dp, top = 2.dp, bottom = 2.dp))
 }
 
+/** Botão ▶ para começar a contar o tempo de uma parte (só no modo Presidir). */
 @Composable
-fun Pilula(texto: String, cor: Color, modifier: Modifier = Modifier) {
-    Box(modifier.size(10.dp).background(cor, RoundedCornerShape(50)))
+fun BotaoIniciar(rodando: Boolean, lang: String, cor: Color? = null, onClick: () -> Unit) {
+    val c = LocalCores.current
+    val s = Textos.de(lang)
+    val base = cor ?: c.ok
+    if (rodando) {
+        Row(
+            Modifier.background(base.copy(alpha = 0.15f), RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(10.dp).background(base, RoundedCornerShape(50)))
+            Spacer(Modifier.width(6.dp))
+            Text(s["emAndamento"], color = base, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+    } else {
+        Row(
+            Modifier.background(base, RoundedCornerShape(50)).clickable(onClick = onClick).padding(start = 10.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("▶", color = Color.White, fontSize = 15.sp)
+            Spacer(Modifier.width(6.dp))
+            Text(s["iniciar"], color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+    }
 }
