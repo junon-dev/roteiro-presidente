@@ -47,6 +47,9 @@ val CoresEscuras = Cores(
 
 val LocalCores = staticCompositionLocalOf { CoresClaras }
 
+/** Tela estreita (celular): layout compacto. */
+val LocalCompacto = staticCompositionLocalOf { false }
+
 /** Fatores dos 6 tamanhos de texto (Configurações → Tamanho do texto). */
 val ESCALAS_FONTE = listOf(0.85f, 0.93f, 1.0f, 1.12f, 1.25f, 1.4f)
 

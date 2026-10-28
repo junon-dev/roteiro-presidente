@@ -6,6 +6,7 @@ import app.roteiro.presidente.nucleo.Config
 import app.roteiro.presidente.nucleo.EstadoPresidir
 import app.roteiro.presidente.nucleo.EstadoSemana
 import app.roteiro.presidente.nucleo.LicaoOficial
+import app.roteiro.presidente.nucleo.Relatorio
 import app.roteiro.presidente.nucleo.Semana
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -55,6 +56,8 @@ data class Arquivo(
     val canticos: Map<String, Map<String, String>> = emptyMap(),
     /** "th"/"lmd" -> idioma -> número -> títulos oficiais */
     val oficiais: Map<String, Map<String, Map<String, LicaoOficial>>> = emptyMap(),
+    /** semana -> tempo real da reunião */
+    val relatorios: Map<String, Relatorio> = emptyMap(),
 )
 
 class Repositorio(private val ctx: Context) {

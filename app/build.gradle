@@ -18,8 +18,8 @@ android {
         applicationId 'app.roteiro.presidente'
         minSdk 26
         targetSdk 35
-        versionCode 6
-        versionName '2.4'
+        versionCode 7
+        versionName '2.5'
     }
 
     signingConfigs {
@@ -79,6 +79,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'

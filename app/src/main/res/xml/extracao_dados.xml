@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Backup do Android 12+: nuvem (conta Google) e transferência para um aparelho novo -->
 <data-extraction-rules>
-    <cloud-backup />
-    <device-transfer />
+    <cloud-backup>
+        <include domain="file" path="dados.json" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="dados.json" />
+    </device-transfer>
 </data-extraction-rules>

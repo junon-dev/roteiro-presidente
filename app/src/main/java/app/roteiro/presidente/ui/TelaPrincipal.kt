@@ -82,7 +82,14 @@ private const val LARGURA_MAX = 940
 
 @Composable
 fun TelaPrincipal(vm: AppVM) {
+    val compacto = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
+    androidx.compose.runtime.CompositionLocalProvider(LocalCompacto provides compacto) { Tela(vm) }
+}
+
+@Composable
+private fun Tela(vm: AppVM) {
     val c = LocalCores.current
+    val compacto = LocalCompacto.current
     val s = vm.tx
     val ctx = LocalContext.current
     val snack = remember { SnackbarHostState() }
@@ -135,7 +142,7 @@ fun TelaPrincipal(vm: AppVM) {
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             BarraTopo(vm, aoPresidir = {
-                if (vm.presidindo) vm.pararPresidir() else { rolar = true; vm.iniciarPresidir(passos.size) }
+                if (vm.presidindo) { vm.pararPresidir(); painel = "relatorio" } else { rolar = true; vm.iniciarPresidir(passos.size) }
             }, aoPainel = { painel = it })
         },
         bottomBar = { if (presidindo && passo != null) BarraPresidir(vm, passos, passoIdx) { i -> rolar = true; vm.irPasso(i, passos.size) } },
@@ -150,20 +157,26 @@ fun TelaPrincipal(vm: AppVM) {
             }
             return@Scaffold
         }
-        val ed = Edicao(est, vm::valor, vm::marcar)
+        val palco = presidindo && vm.palco
+        val ed = Edicao(est, vm::valor, vm::marcar, palco)
+        val dens = androidx.compose.ui.platform.LocalDensity.current
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * if (palco) 1.15f else 1f)
+        ) {
         val feitos = if (presidindo) passos.take(passoIdx).map { it.bloco }.toSet() - setOfNotNull(passo?.bloco) else emptySet()
         LazyColumn(
             state = lista,
-            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = pad.calculateTopPadding() + 10.dp, bottom = pad.calculateBottomPadding() + 120.dp),
+            contentPadding = PaddingValues(start = if (compacto) 8.dp else 14.dp, end = if (compacto) 8.dp else 14.dp,
+                top = pad.calculateTopPadding() + 10.dp, bottom = pad.calculateBottomPadding() + 120.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize().imePadding(),
         ) {
             item(key = "cab") {
                 Box(Modifier.widthIn(max = LARGURA_MAX.dp).fillMaxWidth()) {
-                    Cabecalho(vm, est.sc, est.salas, aoImprimir = {
+                    Cabecalho(vm, est.sc, est.salas, palco, aoImprimir = {
                         Impressao.imprimir(ctx, s["app"] + " — " + sem.periodo,
                             Impressao.html(sem, est, rot, if (est.sc) s["sc"] else s["normal"]))
-                    })
+                    }, aoRelatorio = { painel = "relatorio" })
                 }
             }
             itemsIndexed(rot.itens, key = { i, it -> if (it is ItemRoteiro.BlocoR) it.b.id else "i$i" }) { _, item ->
@@ -190,12 +203,14 @@ fun TelaPrincipal(vm: AppVM) {
                 }
             }
         }
+        }
     }
 
     when (painel) {
         "licoes" -> PainelLicoes(vm) { painel = null }
         "config" -> PainelConfig(vm, aoCanticos = { painel = "canticos" }) { painel = null }
         "canticos" -> PainelCanticos(vm) { painel = "config" }
+        "relatorio" -> sem?.let { PainelRelatorio(vm, it) { painel = null } }
     }
     vm.resultado?.let { msg ->
         androidx.compose.material3.AlertDialog(
@@ -221,56 +236,90 @@ fun TelaPrincipal(vm: AppVM) {
 }
 
 @Composable
-private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> Unit) {
-    val c = LocalCores.current
+private fun SeletorSemana(vm: AppVM, modifier: Modifier = Modifier) {
     val s = vm.tx
     val sem = vm.semanaAtual()
     var menu by remember { mutableStateOf(false) }
+    Row(modifier.background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(10.dp)), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { vm.moverSemana(-1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, s["passoAnt"], tint = Color.White) }
+        Box(Modifier.weight(1f, fill = false)) {
+            Row(Modifier.clickable { menu = true }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(sem?.let { "${it.periodo} · ${it.leitura}" } ?: s["nenhumaSemana"], fontWeight = FontWeight.SemiBold,
+                    color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).widthIn(max = 320.dp))
+                Icon(Icons.Filled.ArrowDropDown, null, tint = Color.White)
+            }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                vm.semanasIdioma().forEach { w ->
+                    DropdownMenuItem(text = {
+                        Text("${w.periodo} · ${w.leitura}", fontWeight = if (w.id == sem?.id) FontWeight.Bold else FontWeight.Normal)
+                    }, onClick = { menu = false; vm.irParaSemana(w.id) })
+                }
+            }
+        }
+        IconButton(onClick = { vm.moverSemana(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, s["proxPasso"], tint = Color.White) }
+    }
+}
+
+@Composable
+private fun SeletorIdioma(vm: AppVM, compacto: Boolean) {
+    val c = LocalCores.current
+    Row(Modifier.background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(10.dp))) {
+        for (l in listOf("pt", "es")) {
+            val on = vm.cfg.lang == l
+            Text(l.uppercase(), fontWeight = FontWeight.Bold, color = if (on) c.barra else Color.White, fontSize = if (compacto) 13.sp else 14.sp,
+                modifier = Modifier.background(if (on) Color.White else Color.Transparent, RoundedCornerShape(10.dp))
+                    .clickable { vm.mudarIdioma(l) }.padding(horizontal = if (compacto) 10.dp else 14.dp, vertical = if (compacto) 8.dp else 11.dp))
+        }
+    }
+}
+
+@Composable
+private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> Unit) {
+    val c = LocalCores.current
+    val s = vm.tx
+    val compacto = LocalCompacto.current
     Surface(color = c.barra, contentColor = Color.White) {
-        FlowRow(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Column(Modifier.align(Alignment.CenterVertically).padding(end = 8.dp)) {
-                Text(s["app"], fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
-                Text(s["appsub"], fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f))
+        if (compacto) {
+            // Celular: título e ícones numa linha, semana na linha de baixo
+            Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(s["app"], fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Color.White, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                    SeletorIdioma(vm, true)
+                    if (vm.presidindo) IconeTopo(if (vm.palco) s["edicao"] else s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
+                        Icon(painterResource(R.drawable.ic_palco), null, Modifier.size(22.dp))
+                    }
+                    IconeTopo(if (vm.presidindo) s["sair"] else s["presidir"], ativo = vm.presidindo, onClick = aoPresidir) {
+                        if (vm.presidindo) Icon(painterResource(R.drawable.ic_parar), null, Modifier.size(22.dp))
+                        else Icon(Icons.Filled.PlayArrow, null, Modifier.size(24.dp))
+                    }
+                    IconeTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(22.dp)) }
+                    IconeTopo(s["config"], onClick = { aoPainel("config") }) { Icon(Icons.Filled.Settings, null, Modifier.size(22.dp)) }
+                }
+                SeletorSemana(vm, Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp))
             }
-            Row(
-                Modifier.align(Alignment.CenterVertically).background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(10.dp)),
-                verticalAlignment = Alignment.CenterVertically,
+        } else {
+            FlowRow(
+                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.Center,
             ) {
-                IconButton(onClick = { vm.moverSemana(-1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, s["passoAnt"], tint = Color.White) }
-                Box {
-                    Row(Modifier.clickable { menu = true }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(sem?.let { "${it.periodo} · ${it.leitura}" } ?: s["nenhumaSemana"], fontWeight = FontWeight.SemiBold,
-                            color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 320.dp))
-                        Icon(Icons.Filled.ArrowDropDown, null, tint = Color.White)
-                    }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        vm.semanasIdioma().forEach { w ->
-                            DropdownMenuItem(text = {
-                                Text("${w.periodo} · ${w.leitura}", fontWeight = if (w.id == sem?.id) FontWeight.Bold else FontWeight.Normal)
-                            }, onClick = { menu = false; vm.irParaSemana(w.id) })
-                        }
-                    }
+                Column(Modifier.align(Alignment.CenterVertically).padding(end = 8.dp)) {
+                    Text(s["app"], fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                    Text(s["appsub"], fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f))
                 }
-                IconButton(onClick = { vm.moverSemana(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, s["proxPasso"], tint = Color.White) }
-            }
-            Row(Modifier.align(Alignment.CenterVertically).background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(10.dp))) {
-                for (l in listOf("pt", "es")) {
-                    val on = vm.cfg.lang == l
-                    Text(l.uppercase(), fontWeight = FontWeight.Bold, color = if (on) c.barra else Color.White,
-                        modifier = Modifier.background(if (on) Color.White else Color.Transparent, RoundedCornerShape(10.dp))
-                            .clickable { vm.mudarIdioma(l) }.padding(horizontal = 14.dp, vertical = 11.dp))
+                SeletorSemana(vm, Modifier.align(Alignment.CenterVertically))
+                Box(Modifier.align(Alignment.CenterVertically)) { SeletorIdioma(vm, false) }
+                BotaoTopo(if (vm.presidindo) s["sair"] else s["presidir"], ativo = vm.presidindo, onClick = aoPresidir) {
+                    if (vm.presidindo) Icon(painterResource(R.drawable.ic_parar), null, Modifier.size(20.dp))
+                    else Icon(Icons.Filled.PlayArrow, null, Modifier.size(20.dp))
                 }
+                if (vm.presidindo) BotaoTopo(if (vm.palco) s["edicao"] else s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
+                    Icon(painterResource(R.drawable.ic_palco), null, Modifier.size(20.dp))
+                }
+                BotaoTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(20.dp)) }
+                BotaoTopo(s["config"], onClick = { aoPainel("config") }) { Icon(Icons.Filled.Settings, null, Modifier.size(20.dp)) }
             }
-            BotaoTopo(if (vm.presidindo) s["sair"] else s["presidir"], ativo = vm.presidindo, onClick = aoPresidir) {
-                if (vm.presidindo) Icon(painterResource(R.drawable.ic_parar), null, Modifier.size(20.dp))
-                else Icon(Icons.Filled.PlayArrow, null, Modifier.size(20.dp))
-            }
-            BotaoTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(20.dp)) }
-            BotaoTopo(s["config"], onClick = { aoPainel("config") }) { Icon(Icons.Filled.Settings, null, Modifier.size(20.dp)) }
         }
     }
 }
@@ -289,21 +338,37 @@ private fun BotaoTopo(texto: String, ativo: Boolean = false, onClick: () -> Unit
     }
 }
 
+/** Botão só com ícone (barra do celular). */
 @Composable
-private fun Cabecalho(vm: AppVM, sc: Boolean, salas: Boolean, aoImprimir: () -> Unit) {
+private fun IconeTopo(descricao: String, ativo: Boolean = false, onClick: () -> Unit, icone: @Composable () -> Unit) {
+    val c = LocalCores.current
+    Box(
+        Modifier.padding(start = 4.dp).size(42.dp)
+            .background(if (ativo) Color.White else Color.Transparent, RoundedCornerShape(10.dp))
+            .clickable(onClickLabel = descricao, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides (if (ativo) c.barra else Color.White)) { icone() }
+    }
+}
+
+@Composable
+private fun Cabecalho(vm: AppVM, sc: Boolean, salas: Boolean, palco: Boolean, aoImprimir: () -> Unit, aoRelatorio: () -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
     val sem = vm.semanaAtual() ?: return
     val ctx = LocalContext.current
+    val compacto = LocalCompacto.current
     var lembretes by rememberSaveable { mutableStateOf(false) }
     Column(
         Modifier.fillMaxWidth().padding(bottom = 6.dp).background(c.cartao, RoundedCornerShape(14.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = if (compacto) 12.dp else 16.dp, vertical = if (compacto) 10.dp else 14.dp)
     ) {
         Text("${s["meeting"]} · ${sem.leitura} · ${sem.periodo}".uppercase(), fontSize = 13.sp, color = c.suave,
             fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
-        Text(if (sc) s["sc"] else s["normal"], fontSize = 24.sp, fontWeight = FontWeight.Bold, color = c.tinta,
-            modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
+        Text(if (sc) s["sc"] else s["normal"], fontSize = if (compacto) 20.sp else 24.sp, fontWeight = FontWeight.Bold, color = c.tinta,
+            modifier = Modifier.padding(top = 2.dp, bottom = if (palco) 0.dp else 10.dp))
+        if (palco) return@Column   // no modo palco, só o título
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = sc, onClick = { vm.setSC(!sc) }, label = { Text(s["visitaSC"]) },
                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.scFundo, selectedLabelColor = c.sc))
@@ -315,6 +380,8 @@ private fun Cabecalho(vm: AppVM, sc: Boolean, salas: Boolean, aoImprimir: () -> 
             }, label = { Text("${s["inicio"]}  ${vm.cfg.inicio}") })
             AssistChip(onClick = aoImprimir, label = { Text(s["imprimir"]) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_imprimir), null, Modifier.size(18.dp)) })
+            if (vm.relatorio(sem.id) != null) AssistChip(onClick = aoRelatorio, label = { Text(s["relatorio"]) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_relogio), null, Modifier.size(18.dp)) })
         }
         Text((if (lembretes) "▾ " else "▸ ") + s["lembretes_t"], fontWeight = FontWeight.SemiBold, color = c.tinta,
             modifier = Modifier.clickable { lembretes = !lembretes }.padding(top = 10.dp, bottom = 4.dp))
@@ -328,6 +395,7 @@ private fun Cabecalho(vm: AppVM, sc: Boolean, salas: Boolean, aoImprimir: () -> 
 private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.Passo>, idx: Int, aoMudarPasso: (Int) -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
+    val compacto = LocalCompacto.current
     val p = passos[idx]
     val pres = vm.presidir
     val dec = vm.decorrido()
@@ -349,6 +417,7 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
     val rs = reuniao.toLong()
     val txtReuniao = "${rs / 3600}:" + ((rs / 60) % 60).toString().padStart(2, '0') + ":" + (rs % 60).toString().padStart(2, '0')
     val faltam = Math.round(105 - reuniao / 60).toInt()
+    val txtFaltam = if (faltam >= 0) Textos.formatar(s["faltam"], "n" to faltam) else "+${-faltam} min"
     // adiantado/atrasado: compara o tempo real da reunião com o previsto para este ponto do roteiro
     val previstoMin = (p.ini - Roteiro.minDe(vm.cfg.inicio)) + minOf(dec, total) / 60.0
     val dif = Math.round(reuniao / 60 - previstoMin).toInt()
@@ -358,48 +427,70 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
         else -> "${s["adiantado"]} ${-dif} min"
     }
     val corStatus = when { Math.abs(dif) < 1 -> Color.White; dif > 0 -> Color(0xFFFFB4A8); else -> Color(0xFF8FE3B0) }
+    val linhaStatus = "${s["previsto"]} ${Roteiro.hm(p.ini)} · $status" + if (pausado) " · ${s["pausado"]}" else ""
+
+    @Composable
+    fun Botoes(tam: Int) {
+        BotaoBarra(tamanho = tam, onClick = { aoMudarPasso(idx - 1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, s["passoAnt"], Modifier.size(30.dp)) }
+        Spacer(Modifier.width(8.dp))
+        BotaoBarra(tamanho = tam, onClick = { vm.pausar() }) {
+            if (pausado) Icon(Icons.Filled.PlayArrow, s["continuar"], Modifier.size(30.dp))
+            else Icon(painterResource(R.drawable.ic_pausa), s["pausar"], Modifier.size(30.dp))
+        }
+        Spacer(Modifier.width(8.dp))
+        BotaoBarra(tamanho = tam, destaque = true, onClick = {
+            if (idx < passos.size - 1) aoMudarPasso(idx + 1) else vm.avisar(s["fim"])
+        }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, s["proxPasso"], Modifier.size(32.dp), tint = c.barra) }
+    }
+
     Surface(color = c.barra, contentColor = Color.White, shadowElevation = 8.dp) {
-        Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(s["parte"].uppercase(), fontSize = 11.sp, letterSpacing = 1.sp, color = Color.White.copy(alpha = 0.7f))
-                Text(txtRel, fontSize = 42.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = if (pausado) 0.6f else 1f),
-                    modifier = Modifier.background(corRel, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 2.dp))
+        if (compacto) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
+                Text(p.titulo, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(linhaStatus, fontSize = 13.sp, color = corStatus, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                    Text(txtRel, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = if (pausado) 0.6f else 1f),
+                        modifier = Modifier.background(corRel, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(txtReuniao, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(txtFaltam, fontSize = 12.sp, color = if (faltam < 0) Color(0xFFFFB4A8) else Color.White.copy(alpha = 0.8f))
+                    }
+                    Botoes(48)
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
-                Text(s["reuniao"].uppercase(), fontSize = 11.sp, letterSpacing = 1.sp, color = Color.White.copy(alpha = 0.7f))
-                Text(txtReuniao, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(if (faltam >= 0) Textos.formatar(s["faltam"], "n" to faltam) else "+${-faltam} min", fontSize = 13.sp,
-                    color = if (faltam < 0) Color(0xFFFFB4A8) else Color.White.copy(alpha = 0.8f))
+        } else {
+            Row(
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(s["parte"].uppercase(), fontSize = 11.sp, letterSpacing = 1.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text(txtRel, fontSize = 42.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = if (pausado) 0.6f else 1f),
+                        modifier = Modifier.background(corRel, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 2.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Text(s["reuniao"].uppercase(), fontSize = 11.sp, letterSpacing = 1.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text(txtReuniao, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(txtFaltam, fontSize = 13.sp, color = if (faltam < 0) Color(0xFFFFB4A8) else Color.White.copy(alpha = 0.8f))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(p.titulo, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(linhaStatus, fontSize = 14.sp, color = corStatus)
+                }
+                Botoes(58)
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(p.titulo, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${s["previsto"]} ${Roteiro.hm(p.ini)} · $status" + if (pausado) " · ${s["pausado"]}" else "",
-                    fontSize = 14.sp, color = corStatus)
-            }
-            BotaoBarra(onClick = { aoMudarPasso(idx - 1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, s["passoAnt"], Modifier.size(30.dp)) }
-            Spacer(Modifier.width(8.dp))
-            BotaoBarra(onClick = { vm.pausar() }) {
-                if (pausado) Icon(Icons.Filled.PlayArrow, s["continuar"], Modifier.size(30.dp))
-                else Icon(painterResource(R.drawable.ic_pausa), s["pausar"], Modifier.size(30.dp))
-            }
-            Spacer(Modifier.width(8.dp))
-            BotaoBarra(destaque = true, onClick = {
-                if (idx < passos.size - 1) aoMudarPasso(idx + 1) else vm.avisar(s["fim"])
-            }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, s["proxPasso"], Modifier.size(32.dp), tint = c.barra) }
         }
     }
 }
 
 @Composable
-private fun BotaoBarra(destaque: Boolean = false, onClick: () -> Unit, conteudo: @Composable () -> Unit) {
+private fun BotaoBarra(tamanho: Int = 58, destaque: Boolean = false, onClick: () -> Unit, conteudo: @Composable () -> Unit) {
     Box(
-        Modifier.size(width = if (destaque) 74.dp else 58.dp, height = 58.dp)
+        Modifier.size(width = if (destaque) (tamanho * 1.28f).dp else tamanho.dp, height = tamanho.dp)
             .background(if (destaque) Color.White else Color.White.copy(alpha = 0.14f), RoundedCornerShape(14.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

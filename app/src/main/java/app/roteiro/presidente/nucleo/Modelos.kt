@@ -65,6 +65,8 @@ data class Config(
     val tela: Boolean = true,
     val tema: String = "auto",   // auto, claro, escuro
     val fonte: Int = 2,          // tamanho do texto: 0 (menor) a 5 (maior); 2 = normal
+    val palco: Boolean = true,   // modo palco ao presidir (esconde campos, texto maior)
+    val pastaBackup: String? = null,   // pasta (URI) da cópia automática
 )
 
 /** Estado de uma semana: visita do SC, salas adicionais e valores digitados (nomes, anotações, marcações). */
@@ -76,6 +78,15 @@ data class EstadoSemana(
     fun valor(k: String): String = v[k].orEmpty()
     fun marcado(k: String): Boolean = v[k] == "true"
 }
+
+/** Tempo real de uma reunião: início, término e segundos gastos em cada passo ("p3", "p3#c" = conselho). */
+@Serializable
+data class Relatorio(
+    val sem: String,
+    val inicio: Long,
+    val fim: Long? = null,
+    val partes: Map<String, Long> = emptyMap(),
+)
 
 /** Cronômetro do modo Presidir (tempos em milissegundos desde 1970). */
 @Serializable

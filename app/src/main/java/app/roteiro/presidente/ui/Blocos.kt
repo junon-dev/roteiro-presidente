@@ -60,6 +60,8 @@ class Edicao(
     val estado: EstadoSemana,
     val valor: (String, String) -> Unit,
     val marcar: (String, Boolean) -> Unit,
+    /** Modo palco: esconde os campos de digitação (nomes, anotações). */
+    val palco: Boolean = false,
 )
 
 private fun Modifier.barraEsquerda(cor: Color, larg: Dp = 4.dp) = drawBehind {
@@ -92,13 +94,14 @@ fun Fala(segs: List<Seg>, e: EstadoSemana) {
 
 @Composable
 fun CampoNome(campo: Campo, ed: Edicao, largura: Dp = 230.dp) {
+    val compacto = LocalCompacto.current
     OutlinedTextField(
         value = ed.estado.valor(campo.k),
         onValueChange = { ed.valor(campo.k, it) },
         label = { Text(campo.rotulo) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-        modifier = Modifier.width(largura),
+        modifier = if (compacto) Modifier.fillMaxWidth() else Modifier.width(largura),
     )
 }
 
@@ -132,45 +135,49 @@ fun CartaoBloco(
 ) {
     val c = LocalCores.current
     val s = Textos.de(lang)
+    val compacto = LocalCompacto.current
     val fundo = when (b.estilo) { Estilo.SALA -> c.salaFundo; Estilo.SC -> c.scFundo; else -> c.cartao }
     val corTit = when (b.estilo) { Estilo.SALA -> c.sala; Estilo.SC -> c.sc; else -> c.tinta }
     val corBarra = when (b.estilo) { Estilo.SALA -> c.sala; Estilo.SC -> c.sc; else -> corSecao(c, b.sec) }
     val forma = RoundedCornerShape(12.dp)
-    var mod = Modifier.fillMaxWidth().padding(vertical = 5.dp)
+    val mod = Modifier.fillMaxWidth().padding(vertical = if (compacto) 4.dp else 5.dp)
         .background(fundo, forma)
         .border(if (atual) 3.dp else 1.dp, if (atual) c.falaBorda else c.linha, forma)
-    Row(mod.alpha(if (feito) 0.6f else 1f).padding(horizontal = 14.dp, vertical = 12.dp)) {
-        Text(b.hora, fontWeight = FontWeight.Bold, fontSize = 19.sp, color = c.tinta, modifier = Modifier.width(58.dp))
-        Column(Modifier.weight(1f).barraEsquerda(corBarra).padding(start = 14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(b.titulo, fontWeight = FontWeight.Bold, fontSize = 19.sp, color = corTit)
-                        b.tag?.let {
-                            Spacer(Modifier.width(8.dp))
-                            Text(it.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.ministerio,
-                                modifier = Modifier.border(1.5.dp, c.ministerio, RoundedCornerShape(5.dp)).padding(horizontal = 5.dp))
-                        }
-                    }
-                    b.subtitulo?.let { Text(it, fontStyle = FontStyle.Italic, color = c.suave, fontSize = 16.sp) }
-                }
-                if (b.durTxt.isNotEmpty()) Text(b.durTxt, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.suave,
-                    modifier = Modifier.background(c.campo, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 2.dp))
-                if (aoIniciar != null && b.passos.any { !it.cons }) {
-                    Spacer(Modifier.width(8.dp))
-                    BotaoIniciar(rodando = atual, lang = lang) { aoIniciar(false) }
+    val podeIniciar = aoIniciar != null && b.passos.any { !it.cons }
+
+    @Composable
+    fun Duracao() {
+        if (b.durTxt.isNotEmpty()) Text(b.durTxt, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.suave,
+            modifier = Modifier.background(c.campo, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 2.dp))
+    }
+
+    @Composable
+    fun Titulo(mod: Modifier) {
+        Column(mod) {
+            FlowRow(verticalArrangement = Arrangement.Center) {
+                Text(b.titulo, fontWeight = FontWeight.Bold, fontSize = 19.sp, color = corTit, modifier = Modifier.padding(end = 8.dp))
+                b.tag?.let {
+                    Text(it.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.ministerio,
+                        modifier = Modifier.align(Alignment.CenterVertically).border(1.5.dp, c.ministerio, RoundedCornerShape(5.dp)).padding(horizontal = 5.dp))
                 }
             }
-            if (!b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
-            b.instr.forEach { Instrucao(it) }
-            if (b.lista.isNotEmpty()) Column(Modifier.padding(vertical = 4.dp)) {
-                b.lista.forEach { item ->
-                    Row(Modifier.padding(vertical = 3.dp)) {
-                        Text("•  ", fontSize = 16.sp, color = c.tinta)
-                        Text(marcado(item), fontSize = 16.sp, lineHeight = 23.sp, color = c.tinta)
-                    }
+            b.subtitulo?.let { Text(it, fontStyle = FontStyle.Italic, color = c.suave, fontSize = 16.sp) }
+        }
+    }
+
+    @Composable
+    fun Corpo() {
+        if (!b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
+        b.instr.forEach { Instrucao(it) }
+        if (b.lista.isNotEmpty()) Column(Modifier.padding(vertical = 4.dp)) {
+            b.lista.forEach { item ->
+                Row(Modifier.padding(vertical = 3.dp)) {
+                    Text("•  ", fontSize = 16.sp, color = c.tinta)
+                    Text(marcado(item), fontSize = 16.sp, lineHeight = 23.sp, color = c.tinta)
                 }
             }
+        }
+        if (!ed.palco) {
             if (b.campos.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(top = 4.dp)) { b.campos.forEach { CampoNome(it, ed) } }
             if (b.salaB.isNotEmpty()) FlowRow(
@@ -182,11 +189,48 @@ fun CartaoBloco(
                 b.salaB.forEach { CampoNome(it, ed, 200.dp) }
             }
             b.areas.forEach { CampoArea(it, ed) }
-            if (b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
-            b.conselho?.let { CartaoConselho(it, ed, lang, consAtual, aoIniciar?.let { f -> { f(true) } }) }
-            b.termino?.let {
-                Text(buildAnnotatedString { append(s["termino"] + ": "); val i = length; append(it); addStyle(SpanStyle(fontWeight = FontWeight.Bold), i, length); append(" · 1h45") },
-                    color = c.suave, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+        } else {
+            // no modo palco, nomes da sala B e anotações aparecem só como texto
+            val nomesB = b.salaB.map { ed.estado.valor(it.k) }.filter { it.isNotBlank() }
+            if (nomesB.isNotEmpty()) Text("${s["sala_b"]}: ${nomesB.joinToString(" / ")}", color = c.sala, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 4.dp))
+            b.areas.forEach { a -> ed.estado.valor(a.k).takeIf { it.isNotBlank() }?.let {
+                Text(marcado("<b>${a.rotulo}:</b> $it"), color = c.tinta, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp)) } }
+        }
+        if (b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
+        b.conselho?.let { CartaoConselho(it, ed, lang, consAtual, aoIniciar?.let { f -> { f(true) } }) }
+        b.termino?.let {
+            Text(buildAnnotatedString { append(s["termino"] + ": "); val i = length; append(it); addStyle(SpanStyle(fontWeight = FontWeight.Bold), i, length); append(" · 1h45") },
+                color = c.suave, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+        }
+    }
+
+    if (compacto) {
+        // Celular: horário e duração numa linha acima do título, sem a coluna lateral
+        Column(mod.alpha(if (feito) 0.6f else 1f).barraEsquerda(corBarra, 5.dp).padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(b.hora, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = c.tinta)
+                Spacer(Modifier.width(8.dp))
+                Duracao()
+                Spacer(Modifier.weight(1f))
+                if (podeIniciar) BotaoIniciar(rodando = atual, lang = lang) { aoIniciar!!(false) }
+            }
+            Titulo(Modifier.padding(top = 4.dp))
+            Corpo()
+        }
+    } else {
+        Row(mod.alpha(if (feito) 0.6f else 1f).padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Text(b.hora, fontWeight = FontWeight.Bold, fontSize = 19.sp, color = c.tinta, modifier = Modifier.width(58.dp))
+            Column(Modifier.weight(1f).barraEsquerda(corBarra).padding(start = 14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Titulo(Modifier.weight(1f))
+                    Duracao()
+                    if (podeIniciar) {
+                        Spacer(Modifier.width(8.dp))
+                        BotaoIniciar(rodando = atual, lang = lang) { aoIniciar!!(false) }
+                    }
+                }
+                Corpo()
             }
         }
     }
@@ -250,8 +294,12 @@ fun CartaoConselho(k: Conselho, ed: Edicao, lang: String, atual: Boolean, aoInic
         }
         k.observacao?.let { Text(it, color = c.suave, fontSize = 15.sp, modifier = Modifier.padding(vertical = 2.dp)) }
         Text(marcado(s["cons_passos"]), color = c.suave, fontSize = 14.5.sp, modifier = Modifier.padding(top = 6.dp))
-        CampoArea(Campo(k.notaK, s["f_notas"], true), ed)
-        Text(s["cons_obs"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        if (!ed.palco) {
+            CampoArea(Campo(k.notaK, s["f_notas"], true), ed)
+            Text(s["cons_obs"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        } else ed.estado.valor(k.notaK).takeIf { it.isNotBlank() }?.let {
+            Text(marcado("<b>${s["f_notas"]}:</b> $it"), color = c.tinta, fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp))
+        }
     }
 }
 
@@ -266,11 +314,12 @@ fun TituloSecao(sec: String, titulo: String) {
 @Composable
 fun Dica(texto: String, sc: Boolean) {
     val c = LocalCores.current
+    val recuo = if (LocalCompacto.current) 0.dp else 72.dp
     if (sc) Text(texto, color = c.sc, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-        modifier = Modifier.fillMaxWidth().padding(start = 72.dp, top = 4.dp, bottom = 4.dp)
+        modifier = Modifier.fillMaxWidth().padding(start = recuo, top = 4.dp, bottom = 4.dp)
             .background(c.scFundo, RoundedCornerShape(8.dp)).padding(10.dp))
     else Text(texto, color = c.suave, fontSize = 14.sp, fontStyle = FontStyle.Italic,
-        modifier = Modifier.padding(start = 72.dp, top = 2.dp, bottom = 2.dp))
+        modifier = Modifier.padding(start = recuo, top = 2.dp, bottom = 2.dp))
 }
 
 /** Botão ▶ para começar a contar o tempo de uma parte (só no modo Presidir). */

@@ -65,14 +65,16 @@ import java.time.LocalDate
 @Composable
 fun Painel(titulo: String, aoFechar: () -> Unit, rolavel: Boolean = true, conteudo: @Composable ColumnScope.() -> Unit) {
     val c = LocalCores.current
+    val compacto = LocalCompacto.current
     Dialog(onDismissRequest = aoFechar, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             shape = RoundedCornerShape(16.dp), color = c.cartao,
-            modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth(0.95f).fillMaxHeight(0.92f).imePadding(),
+            modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth(if (compacto) 0.98f else 0.95f)
+                .fillMaxHeight(if (compacto) 0.96f else 0.92f).imePadding(),
         ) {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+            Column(Modifier.padding(horizontal = if (compacto) 14.dp else 20.dp, vertical = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(titulo, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.weight(1f))
+                    Text(titulo, fontSize = if (compacto) 19.sp else 22.sp, fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.weight(1f))
                     IconButton(onClick = aoFechar) { Icon(Icons.Filled.Close, null) }
                 }
                 if (rolavel) Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 12.dp), content = conteudo)
@@ -90,8 +92,18 @@ private fun Secao(t: String) {
 }
 
 @Composable
-private fun Linha(rotulo: String, detalhe: String? = null, controle: @Composable () -> Unit) {
+private fun Linha(rotulo: String, detalhe: String? = null, largo: Boolean = false, controle: @Composable () -> Unit) {
     val c = LocalCores.current
+    if (largo && LocalCompacto.current) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Text(rotulo, fontWeight = FontWeight.SemiBold, color = c.tinta)
+            detalhe?.let { Text(it, color = c.suave, fontSize = 13.5.sp) }
+            Spacer(Modifier.width(1.dp))
+            Row(Modifier.padding(top = 6.dp)) { controle() }
+        }
+        HorizontalDivider(color = c.linha)
+        return
+    }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(rotulo, fontWeight = FontWeight.SemiBold, color = c.tinta)
@@ -139,6 +151,9 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
             vm.resultado = if (ok) s["salvo"] else s["salvoErro"]
         }
     }
+    val escolherPasta = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) vm.definirPastaBackup(uri)
+    }
     val abrirBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val t = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }.getOrNull()
@@ -148,7 +163,7 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
 
     Painel(s["config"], aoFechar) {
         Secao(s["geral"])
-        Linha(s["idioma"]) { Opcoes(listOf("pt" to "Português", "es" to "Español"), vm.cfg.lang) { vm.mudarIdioma(it) } }
+        Linha(s["idioma"], largo = true) { Opcoes(listOf("pt" to "Português", "es" to "Español"), vm.cfg.lang) { vm.mudarIdioma(it) } }
         Linha(s["horaIni"]) {
             TextButton(onClick = {
                 val m = app.roteiro.presidente.nucleo.Roteiro.minDe(vm.cfg.inicio)
@@ -160,6 +175,7 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
         Linha(s["som"]) { Switch(vm.cfg.som, { on -> vm.mudarCfg { it.copy(som = on) } }) }
         Linha(s["vibrar"]) { Switch(vm.cfg.vibrar, { on -> vm.mudarCfg { it.copy(vibrar = on) } }) }
         Linha(s["tela"]) { Switch(vm.cfg.tela, { on -> vm.mudarCfg { it.copy(tela = on) } }) }
+        Linha(s["palcoCfg"], s["palco_info"]) { Switch(vm.cfg.palco, { on -> vm.mudarCfg { it.copy(palco = on) }; vm.palco = on }) }
         // Tamanho do texto: barra com 6 posições, como no JW Library
         Text(s["tamTexto"], fontWeight = FontWeight.SemiBold, color = c.tinta, modifier = Modifier.padding(top = 10.dp))
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
@@ -173,7 +189,7 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
             Text("A", fontSize = 30.sp, color = c.suave)
         }
         HorizontalDivider(color = c.linha)
-        Linha(s["tema"]) { Opcoes(listOf("auto" to s["temaAuto"], "claro" to s["temaClaro"], "escuro" to s["temaEscuro"]), vm.cfg.tema) { t -> vm.mudarCfg { it.copy(tema = t) } } }
+        Linha(s["tema"], largo = true) { Opcoes(listOf("auto" to s["temaAuto"], "claro" to s["temaClaro"], "escuro" to s["temaEscuro"]), vm.cfg.tema) { t -> vm.mudarCfg { it.copy(tema = t) } } }
 
         // Arquivos
         Secao(s["arquivos"])
@@ -222,6 +238,23 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
             OutlinedButton(onClick = { salvarBackup.launch("roteiro-presidente-${LocalDate.now()}.json") }) { Text(s["exportar"]) }
             OutlinedButton(onClick = { abrirBackup.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text(s["importarBk"]) }
             OutlinedButton(onClick = { confirmarLimpar = true }) { Text(s["limparSem"], color = c.erro) }
+        }
+
+        Text(s["bk_auto"], fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 16.dp))
+        Text(s["bk_auto_info"], color = c.suave, fontSize = 15.sp)
+        val pasta = vm.nomePastaBackup()
+        if (pasta != null) {
+            Text("📁 $pasta", color = c.tinta, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+            Text(if (vm.ultimaCopia > 0) Textos.formatar(s["bk_ultima"], "d" to
+                java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(vm.ultimaCopia))) else s["bk_nunca"],
+                color = c.suave, fontSize = 14.sp)
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { escolherPasta.launch(null) }) { Text(s["bk_pasta"]) }
+            if (pasta != null) {
+                OutlinedButton(onClick = { vm.copiarAgora(forcar = true, avisarResultado = true) }) { Text(s["bk_agora"]) }
+                OutlinedButton(onClick = { vm.definirPastaBackup(null) }) { Text(s["bk_desligar"], color = c.erro) }
+            }
         }
 
         Secao(s["sobre"])
@@ -319,5 +352,71 @@ fun PainelLicoes(vm: AppVM, aoFechar: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/* ---------- Relatório do tempo da reunião ---------- */
+@Composable
+fun PainelRelatorio(vm: AppVM, sem: app.roteiro.presidente.nucleo.Semana, aoFechar: () -> Unit) {
+    val c = LocalCores.current
+    val s = vm.tx
+    val ctx = LocalContext.current
+    val compacto = LocalCompacto.current
+    val rel = vm.relatorio(sem.id)
+    val fmtH = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+    fun mmss(seg: Long): String { val a = Math.abs(seg); return (if (seg < 0) "−" else "") + "${a / 60}:" + (a % 60).toString().padStart(2, '0') }
+    Painel(s["relatorio"], aoFechar) {
+        Text("${sem.periodo} · ${sem.leitura}", color = c.suave, fontWeight = FontWeight.SemiBold)
+        if (rel == null) { Text(s["rel_vazio"], color = c.suave, modifier = Modifier.padding(top = 12.dp)); return@Painel }
+        // resumo
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 12.dp)) {
+            @Composable fun Caixa(rot: String, valor: String, cor: Color = c.tinta) {
+                Column(Modifier.background(c.campo, RoundedCornerShape(10.dp)).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    Text(rot.uppercase(), fontSize = 11.sp, color = c.suave, letterSpacing = 0.8.sp)
+                    Text(valor, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = cor)
+                }
+            }
+            Caixa(s["rel_inicio"], fmtH.format(java.util.Date(rel.inicio)))
+            Caixa(s["rel_fim"], rel.fim?.let { fmtH.format(java.util.Date(it)) } ?: s["rel_emAndamento"])
+            rel.fim?.let {
+                val dur = (it - rel.inicio) / 1000
+                Caixa(s["rel_duracao"], "${dur / 3600}:" + ((dur / 60) % 60).toString().padStart(2, '0') + " / 1:45",
+                    if (dur > 105 * 60 + 59) c.erro else c.ok)
+            }
+        }
+        HorizontalDivider(color = c.linha)
+        vm.linhasRelatorio(sem).forEach { l ->
+            val real = l.realSeg
+            val dif = real?.let { it - l.previstoSeg }
+            val corDif = when { dif == null || l.previstoSeg == 0 -> c.suave; dif > 15 -> c.erro; dif < -60 -> c.alerta; else -> c.ok }
+            val txtReal = real?.let { mmss(it) } ?: "—"
+            val txtDif = if (dif != null && l.previstoSeg > 0) (if (dif > 0) "+" else "") + mmss(dif) else ""
+            if (compacto) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                    Text("${l.hora}  ${l.titulo}", color = if (real == null) c.suave else c.tinta, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Row {
+                        Text("${s["rel_previsto"]} ${l.previstoSeg / 60}:00 · ${s["rel_real"]} $txtReal", color = c.suave, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text(txtDif, color = corDif, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(l.hora, color = c.suave, modifier = Modifier.width(52.dp))
+                    Text(l.titulo, color = if (real == null) c.suave else c.tinta, modifier = Modifier.weight(1f), maxLines = 2)
+                    Text("${l.previstoSeg / 60}:00", color = c.suave, modifier = Modifier.width(58.dp))
+                    Text(txtReal, fontWeight = FontWeight.SemiBold, color = c.tinta, modifier = Modifier.width(64.dp))
+                    Text(txtDif, color = corDif, fontWeight = FontWeight.Bold, modifier = Modifier.width(70.dp))
+                }
+            }
+            HorizontalDivider(color = c.linha)
+        }
+        Text(s["rel_legenda"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        Button(onClick = {
+            val i = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, vm.textoRelatorio(sem))
+            }
+            ctx.startActivity(android.content.Intent.createChooser(i, s["rel_compartilhar"]))
+        }, modifier = Modifier.padding(top = 12.dp)) { Text(s["rel_compartilhar"]) }
     }
 }

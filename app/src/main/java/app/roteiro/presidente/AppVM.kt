@@ -20,7 +20,9 @@ import app.roteiro.presidente.nucleo.EstadoPresidir
 import app.roteiro.presidente.nucleo.EstadoSemana
 import app.roteiro.presidente.nucleo.LeitorApostila
 import app.roteiro.presidente.nucleo.LicaoOficial
+import app.roteiro.presidente.nucleo.Passo
 import app.roteiro.presidente.nucleo.Proxima
+import app.roteiro.presidente.nucleo.Relatorio
 import app.roteiro.presidente.nucleo.Roteiro
 import app.roteiro.presidente.nucleo.RoteiroMontado
 import app.roteiro.presidente.nucleo.Semana
@@ -222,6 +224,54 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         a.copy(oficiais = a.oficiais + (pub to (a.oficiais[pub].orEmpty() - lang)))
     }
 
+    /* ---------- cópia automática numa pasta (ex.: Google Drive) ---------- */
+    private val prefs = app.getSharedPreferences("copia", android.content.Context.MODE_PRIVATE)
+    var ultimaCopia by mutableLongStateOf(prefs.getLong("quando", 0L))
+        private set
+
+    fun definirPastaBackup(uri: Uri?) {
+        val ctx = getApplication<Application>()
+        if (uri != null) runCatching {
+            ctx.contentResolver.takePersistableUriPermission(uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }
+        prefs.edit().remove("hash").apply()
+        mudarCfg { it.copy(pastaBackup = uri?.toString()) }
+        if (uri != null) copiarAgora(forcar = true)
+    }
+
+    fun nomePastaBackup(): String? = cfg.pastaBackup?.let { p ->
+        runCatching { androidx.documentfile.provider.DocumentFile.fromTreeUri(getApplication(), Uri.parse(p))?.name }.getOrNull() ?: p
+    }
+
+    /** Salva uma cópia por dia na pasta escolhida (só se algo mudou) e guarda as 10 mais recentes. */
+    fun copiarAgora(forcar: Boolean = false, avisarResultado: Boolean = false) {
+        val pasta = cfg.pastaBackup ?: return
+        val texto = repo.paraTexto(dados)
+        val hash = texto.hashCode()
+        if (!forcar && prefs.getInt("hash", 0) == hash) return
+        val ctx = getApplication<Application>()
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = runCatching {
+                val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(ctx, Uri.parse(pasta)) ?: error("pasta")
+                val nome = "roteiro-presidente-${LocalDate.now()}.json"
+                val arq = dir.findFile(nome) ?: dir.createFile("application/json", nome) ?: error("criar")
+                ctx.contentResolver.openOutputStream(arq.uri, "wt")!!.use { it.write(texto.toByteArray()) }
+                // mantém só as 10 cópias mais recentes
+                dir.listFiles().filter { it.name?.startsWith("roteiro-presidente-20") == true }
+                    .sortedByDescending { it.name }.drop(10).forEach { it.delete() }
+            }.isSuccess
+            withContext(Dispatchers.Main) {
+                if (ok) {
+                    val t = System.currentTimeMillis()
+                    prefs.edit().putInt("hash", hash).putLong("quando", t).apply()
+                    ultimaCopia = t
+                }
+                if (avisarResultado) resultado = if (ok) tx["bk_ok"] else tx["bk_erro"]
+            }
+        }
+    }
+
     /* ---------- cópia de segurança ---------- */
     fun exportarTexto(): String = repo.paraTexto(dados)
     fun importarTexto(t: String): Boolean = try { substituir(repo.deTexto(t)); true } catch (e: Exception) { false }
@@ -231,22 +281,92 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     val presidir: EstadoPresidir? get() = dados.presidir
     private var avisado = false
 
+    /** Modo palco: esconde os campos de digitação durante a reunião. */
+    var palco by mutableStateOf(dados.cfg.palco)
+
     fun iniciarPresidir(totalPassos: Int) {
         val id = semanaId ?: return
         val salvo = dados.presidir
         val agoraMs = System.currentTimeMillis()
-        val novo = if (salvo != null && salvo.sem == id && salvo.passo < totalPassos &&
-            agoraMs - salvo.inicioPasso < 3 * 3600_000L) salvo.copy(ativo = true, inicioReuniao = salvo.inicioReuniao.takeIf { it > 0 } ?: salvo.inicioPasso)
+        val retomando = salvo != null && salvo.sem == id && salvo.passo < totalPassos && agoraMs - salvo.inicioPasso < 3 * 3600_000L
+        val novo = if (retomando) salvo!!.copy(ativo = true, inicioReuniao = salvo.inicioReuniao.takeIf { it > 0 } ?: salvo.inicioPasso)
         else EstadoPresidir(id, 0, agoraMs, null, 0, true, inicioReuniao = agoraMs)
         avisado = false
-        mudar { it.copy(presidir = novo) }
+        palco = cfg.palco
+        mudar { a ->
+            val rel = a.relatorios[id]
+            val novoRel = if (retomando && rel != null) rel.copy(fim = null) else Relatorio(id, novo.inicioReuniao)
+            a.copy(presidir = novo, relatorios = a.relatorios + (id to novoRel))
+        }
     }
-    fun pararPresidir() { dados.presidir?.let { p -> mudar { it.copy(presidir = p.copy(ativo = false)) } } }
+
+    private fun passosDaSemana(): List<Passo> = semanaAtual()?.let { roteiro(it).passos }.orEmpty()
+    private fun chave(p: Passo) = if (p.cons) "${p.bloco}#c" else p.bloco
+
+    /** Soma ao relatório o tempo gasto no passo atual (chamado ao trocar de parte ou encerrar). */
+    private fun registrarPassoAtual(a: Arquivo, fim: Boolean): Arquivo {
+        val p = a.presidir ?: return a
+        val passo = passosDaSemana().getOrNull(p.passo) ?: return a
+        val seg = Math.round(decorrido()).coerceAtLeast(0)
+        val rel = a.relatorios[p.sem] ?: Relatorio(p.sem, p.inicioReuniao.takeIf { it > 0 } ?: p.inicioPasso)
+        val k = chave(passo)
+        val novo = rel.copy(partes = rel.partes + (k to ((rel.partes[k] ?: 0) + seg)),
+            fim = if (fim) System.currentTimeMillis() else rel.fim)
+        return a.copy(relatorios = a.relatorios + (p.sem to novo))
+    }
+
+    fun pararPresidir() {
+        val p = dados.presidir ?: return
+        if (!p.ativo) return
+        agora = System.currentTimeMillis()
+        mudar { a -> registrarPassoAtual(a, fim = true).copy(presidir = p.copy(ativo = false)) }
+    }
     fun irPasso(i: Int, total: Int) {
         val p = dados.presidir ?: return
         val n = i.coerceIn(0, (total - 1).coerceAtLeast(0))
         avisado = false
-        mudar { it.copy(presidir = p.copy(passo = n, inicioPasso = System.currentTimeMillis(), pausadoEm = null, acumuladoPausa = 0)) }
+        agora = System.currentTimeMillis()
+        mudar { a -> registrarPassoAtual(a, fim = false).copy(presidir = p.copy(passo = n, inicioPasso = System.currentTimeMillis(), pausadoEm = null, acumuladoPausa = 0)) }
+    }
+
+    fun relatorio(id: String): Relatorio? = dados.relatorios[id]
+
+    /** Linhas do relatório: cada passo do roteiro com o tempo previsto e o real. */
+    data class LinhaRelatorio(val hora: String, val titulo: String, val previstoSeg: Int, val realSeg: Long?)
+
+    fun linhasRelatorio(sem: Semana): List<LinhaRelatorio> {
+        val rel = relatorio(sem.id) ?: return emptyList()
+        val emCurso = presidindo && dados.presidir?.sem == sem.id
+        val atual = if (emCurso) passosDaSemana().getOrNull(dados.presidir!!.passo) else null
+        return roteiro(sem).passos.map { p ->
+            var real = rel.partes[chave(p)]
+            if (atual != null && atual == p) real = (real ?: 0) + Math.round(decorrido())
+            LinhaRelatorio(Roteiro.hm(p.ini), p.titulo, p.dur * 60, real)
+        }
+    }
+
+    fun textoRelatorio(sem: Semana): String {
+        val s = tx
+        val rel = relatorio(sem.id) ?: return ""
+        val fmtH = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        fun mmss(seg: Long): String { val a = Math.abs(seg); return (if (seg < 0) "-" else "") + "${a / 60}:" + (a % 60).toString().padStart(2, '0') }
+        val sb = StringBuilder()
+        sb.append("${s["relatorio"]} — ${sem.periodo} (${sem.leitura})\n")
+        sb.append("${s["rel_inicio"]}: ${fmtH.format(java.util.Date(rel.inicio))}")
+        rel.fim?.let { sb.append(" · ${s["rel_fim"]}: ${fmtH.format(java.util.Date(it))} · ${s["rel_duracao"]}: ${mmss((it - rel.inicio) / 1000)} (1:45:00)") }
+        sb.append("\n\n")
+        for (l in linhasRelatorio(sem)) {
+            val real = l.realSeg
+            sb.append("${l.hora}  ${l.titulo}: ")
+            if (real == null) sb.append("— (${l.previstoSeg / 60} min)\n")
+            else {
+                val dif = real - l.previstoSeg
+                sb.append("${mmss(real)} / ${l.previstoSeg / 60}:00")
+                if (l.previstoSeg > 0) sb.append("  (${if (dif > 0) "+" else ""}${mmss(dif)})")
+                sb.append("\n")
+            }
+        }
+        return sb.toString()
     }
     fun pausar() {
         val p = dados.presidir ?: return

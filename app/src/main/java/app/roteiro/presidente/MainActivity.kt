@@ -36,5 +36,6 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         vm.gravarAgora()
+        vm.copiarAgora()   // cópia automática na pasta escolhida (se configurada)
     }
 }
