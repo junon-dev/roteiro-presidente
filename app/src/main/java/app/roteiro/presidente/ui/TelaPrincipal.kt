@@ -115,7 +115,7 @@ private fun Tela(vm: AppVM) {
     }
     // Relógio
     LaunchedEffect(presidindo, passoIdx) {
-        while (presidindo) {
+        while (presidindo && vm.relogioAutomatico) {
             vm.agora = System.currentTimeMillis()
             passo?.let { vm.verificarFimDoTempo(it.dur) }
             delay(250)

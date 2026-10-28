@@ -281,6 +281,9 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     val presidir: EstadoPresidir? get() = dados.presidir
     private var avisado = false
 
+    /** Relógio do modo Presidir (desligado só nos testes que geram imagens das telas). */
+    var relogioAutomatico = true
+
     /** Modo palco: esconde os campos de digitação durante a reunião. */
     var palco by mutableStateOf(dados.cfg.palco)
 
