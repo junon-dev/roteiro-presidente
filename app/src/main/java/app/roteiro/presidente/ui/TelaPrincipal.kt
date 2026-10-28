@@ -286,7 +286,7 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
                     Text(s["app"], fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Color.White, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
                     SeletorIdioma(vm, true)
-                    if (vm.presidindo) IconeTopo(if (vm.palco) s["edicao"] else s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
+                    if (vm.presidindo) IconeTopo(s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
                         Icon(painterResource(R.drawable.ic_palco), null, Modifier.size(22.dp))
                     }
                     IconeTopo(if (vm.presidindo) s["sair"] else s["presidir"], ativo = vm.presidindo, onClick = aoPresidir) {
@@ -314,7 +314,7 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
                     if (vm.presidindo) Icon(painterResource(R.drawable.ic_parar), null, Modifier.size(20.dp))
                     else Icon(Icons.Filled.PlayArrow, null, Modifier.size(20.dp))
                 }
-                if (vm.presidindo) BotaoTopo(if (vm.palco) s["edicao"] else s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
+                if (vm.presidindo) BotaoTopo(s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
                     Icon(painterResource(R.drawable.ic_palco), null, Modifier.size(20.dp))
                 }
                 BotaoTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(20.dp)) }
