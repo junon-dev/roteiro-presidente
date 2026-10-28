@@ -22,7 +22,13 @@ jobs:
       - name: Compilar o APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon testDebugUnitTest --tests 'app.roteiro.presidente.RoteiroTest' assembleRelease
+          set -o pipefail
+          ./gradlew --no-daemon testDebugUnitTest --tests 'app.roteiro.presidente.RoteiroTest' assembleRelease 2>&1 | tee build.log
+
+      - name: Mostrar erros da compilação
+        if: failure()
+        run: |
+          grep -E "^e: |error:|What went wrong|FAILED|Exception" -A4 build.log | head -80 | while IFS= read -r l; do echo "::error::$l"; done
 
       - name: Preparar o arquivo
         id: apk
@@ -49,7 +55,12 @@ jobs:
 
       - name: Gerar imagens das telas (celular e tablet)
         continue-on-error: true
-        run: ./gradlew --no-daemon testDebugUnitTest --tests 'app.roteiro.presidente.Telas*' 2>&1 | tail -60
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon testDebugUnitTest --tests 'app.roteiro.presidente.Telas*' 2>&1 | tee telas.log || {
+            grep -E "^e: |error:|What went wrong|FAILED|Exception|Caused by" -A4 telas.log | head -60 | while IFS= read -r l; do echo "::warning::$l"; done
+            find app/build/test-results -name '*.xml' -exec grep -h -A6 "<failure" {} \; | head -60 | while IFS= read -r l; do echo "::warning::$l"; done
+            exit 1; }
 
       - name: Anexar imagens das telas
         if: always()
