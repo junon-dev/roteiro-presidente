@@ -212,6 +212,32 @@ private fun Tela(vm: AppVM) {
         "canticos" -> PainelCanticos(vm) { painel = "config" }
         "relatorio" -> sem?.let { PainelRelatorio(vm, it) { painel = null } }
     }
+    // Começou atrasado ou por uma parte do meio: como contar o relógio da reunião?
+    vm.pedidoRelogio?.let { ped ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { vm.responderRelogio(null) },
+            title = { Text(s["rlg_t"]) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(s["rlg_q"])
+                    ped.minHorario?.let { m ->
+                        androidx.compose.material3.Button(onClick = { vm.responderRelogio(m) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(Textos.formatar(s["rlg_hor"], "h" to ped.horario, "n" to m))
+                        }
+                    }
+                    ped.minSoma?.let { m ->
+                        androidx.compose.material3.Button(onClick = { vm.responderRelogio(m) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(Textos.formatar(s["rlg_soma"], "n" to m))
+                        }
+                    }
+                    androidx.compose.material3.OutlinedButton(onClick = { vm.responderRelogio(null) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(s["rlg_manter"])
+                    }
+                }
+            },
+            confirmButton = {},
+        )
+    }
     vm.resultado?.let { msg ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { vm.resultado = null },

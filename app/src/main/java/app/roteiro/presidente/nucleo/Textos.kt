@@ -3,6 +3,12 @@ package app.roteiro.presidente.nucleo
 /** Textos da interface em português e espanhol (gerado a partir da versão HTML + textos do app nativo). */
 object Textos {
     private val pt: Map<String, String> = mapOf(
+        "rlg_t" to "Relógio da reunião",
+        "rlg_q" to "A reunião já devia estar em andamento. Como o app deve contar o tempo da reunião?",
+        "rlg_hor" to "Desde o horário de início ({h}): já passaram {n} min",
+        "rlg_soma" to "Pela soma das partes anteriores: {n} min",
+        "rlg_manter" to "Começar a contar a partir de agora",
+        "anotar" to "Anotar elogios e conselhos",
         "relatorio" to "Relatório da reunião",
         "rel_inicio" to "Início",
         "rel_fim" to "Término",
@@ -208,6 +214,12 @@ object Textos {
     )
     private val ptSecoes: Map<String, String> = mapOf("tesouros" to "Tesouros da Palavra de Deus", "ministerio" to "Faça Seu Melhor no Ministério", "vida" to "Nossa Vida Cristã")
     private val es: Map<String, String> = mapOf(
+        "rlg_t" to "Reloj de la reunión",
+        "rlg_q" to "La reunión ya debería estar en curso. ¿Cómo debe contar la app el tiempo de la reunión?",
+        "rlg_hor" to "Desde la hora de inicio ({h}): ya pasaron {n} min",
+        "rlg_soma" to "Por la suma de las partes anteriores: {n} min",
+        "rlg_manter" to "Empezar a contar desde ahora",
+        "anotar" to "Anotar elogios y consejos",
         "relatorio" to "Informe de la reunión",
         "rel_inicio" to "Inicio",
         "rel_fim" to "Término",

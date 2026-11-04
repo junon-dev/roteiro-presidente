@@ -45,6 +45,8 @@ abstract class TelasBase(private val prefixo: String) {
         val passos = vm.roteiro(vm.semanaAtual()!!).passos
         regra.runOnIdle { vm.iniciarPresidir(passos.size) }
         regra.runOnIdle { vm.irPasso(passos.indexOfFirst { it.bloco == "p4" }, passos.size) }
+        // começou por uma parte do meio: o app pergunta como contar o relógio da reunião
+        if (vm.pedidoRelogio != null) { foto("0-pergunta-relogio"); regra.runOnIdle { vm.responderRelogio(vm.pedidoRelogio?.minSoma) } }
         regra.runOnIdle { vm.agora = System.currentTimeMillis() + 150_000 }   // simula 2:30 de parte
         foto("2-presidir-palco")
         regra.runOnIdle { vm.palco = false }

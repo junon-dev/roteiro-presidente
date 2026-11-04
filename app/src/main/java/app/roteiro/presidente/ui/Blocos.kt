@@ -198,7 +198,7 @@ fun CartaoBloco(
                 Text(marcado("<b>${a.rotulo}:</b> $it"), color = c.tinta, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp)) } }
         }
         if (b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
-        b.conselho?.let { CartaoConselho(it, ed, lang, consAtual, aoIniciar?.let { f -> { f(true) } }) }
+        b.conselho?.let { CartaoConselho(it, ed, lang, consAtual, aoIniciar?.let { f -> { f(true) } }, parteEmCurso = atual) }
         b.termino?.let {
             Text(buildAnnotatedString { append(s["termino"] + ": "); val i = length; append(it); addStyle(SpanStyle(fontWeight = FontWeight.Bold), i, length); append(" · 1h45") },
                 color = c.suave, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
@@ -237,7 +237,7 @@ fun CartaoBloco(
 }
 
 @Composable
-fun CartaoConselho(k: Conselho, ed: Edicao, lang: String, atual: Boolean, aoIniciar: (() -> Unit)?) {
+fun CartaoConselho(k: Conselho, ed: Edicao, lang: String, atual: Boolean, aoIniciar: (() -> Unit)?, parteEmCurso: Boolean = false) {
     val c = LocalCores.current
     val s = Textos.de(lang)
     val forma = RoundedCornerShape(10.dp)
@@ -294,11 +294,19 @@ fun CartaoConselho(k: Conselho, ed: Edicao, lang: String, atual: Boolean, aoInic
         }
         k.observacao?.let { Text(it, color = c.suave, fontSize = 15.sp, modifier = Modifier.padding(vertical = 2.dp)) }
         Text(marcado(s["cons_passos"]), color = c.suave, fontSize = 14.5.sp, modifier = Modifier.padding(top = 6.dp))
-        if (!ed.palco) {
+        // As anotações de elogios e conselhos ficam liberadas mesmo no modo palco: abertas sozinhas
+        // enquanto a parte do estudante ou o conselho está correndo, e nas outras partes pelo botão "Anotar".
+        var liberado by rememberSaveable(k.notaK) { mutableStateOf(false) }
+        if (!ed.palco || atual || parteEmCurso || liberado) {
             CampoArea(Campo(k.notaK, s["f_notas"], true), ed)
-            Text(s["cons_obs"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
-        } else ed.estado.valor(k.notaK).takeIf { it.isNotBlank() }?.let {
-            Text(marcado("<b>${s["f_notas"]}:</b> $it"), color = c.tinta, fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp))
+            if (!ed.palco) Text(s["cons_obs"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        } else {
+            ed.estado.valor(k.notaK).takeIf { it.isNotBlank() }?.let {
+                Text(marcado("<b>${s["f_notas"]}:</b> $it"), color = c.tinta, fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+            Text("✎  " + s["anotar"], color = c.ministerio, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                modifier = Modifier.padding(top = 6.dp).border(1.5.dp, c.ministerio, RoundedCornerShape(50))
+                    .clickable { liberado = true }.padding(horizontal = 14.dp, vertical = 7.dp))
         }
     }
 }

@@ -281,6 +281,43 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     val presidir: EstadoPresidir? get() = dados.presidir
     private var avisado = false
 
+    /* Relógio da reunião ao começar atrasado ou por uma parte do meio */
+    data class PedidoRelogio(val minHorario: Int?, val minSoma: Int?, val horario: String)
+    var pedidoRelogio by mutableStateOf<PedidoRelogio?>(null)
+    private var perguntouRelogio = false
+
+    /** Minutos desde o horário marcado para a reunião (ex.: 20:00), se a reunião já devia ter começado. */
+    private fun minutosDesdeHorario(): Int? {
+        val t = java.time.LocalTime.now()
+        val m = t.hour * 60 + t.minute - Roteiro.minDe(cfg.inicio)
+        return m.takeIf { it in 2..170 }
+    }
+
+    /** Pergunta (uma vez por reunião) se o relógio deve contar o tempo já passado. */
+    private fun verificarRelogio(alvo: Int) {
+        if (perguntouRelogio) return
+        val p = passosDaSemana().getOrNull(alvo) ?: return
+        val jaContado = decorridoReuniao() / 60
+        val soma = (p.ini - Roteiro.minDe(cfg.inicio)).takeIf { it - jaContado >= 3 }
+        val hor = minutosDesdeHorario()?.takeIf { it - jaContado >= 3 }
+        if (soma == null && hor == null) return
+        perguntouRelogio = true
+        pedidoRelogio = PedidoRelogio(hor, soma, cfg.inicio)
+    }
+
+    /** Faz o relógio da reunião contar [minutos] já passados (null = manter a partir de agora). */
+    fun responderRelogio(minutos: Int?) {
+        pedidoRelogio = null
+        val p = dados.presidir ?: return
+        if (minutos == null) return
+        val ini = System.currentTimeMillis() - minutos * 60_000L
+        mudar { a ->
+            val rel = a.relatorios[p.sem]
+            a.copy(presidir = p.copy(inicioReuniao = ini),
+                relatorios = if (rel != null) a.relatorios + (p.sem to rel.copy(inicio = ini)) else a.relatorios)
+        }
+    }
+
     /** Relógio do modo Presidir (desligado só nos testes que geram imagens das telas). */
     var relogioAutomatico = true
 
@@ -296,11 +333,14 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         else EstadoPresidir(id, 0, agoraMs, null, 0, true, inicioReuniao = agoraMs)
         avisado = false
         palco = cfg.palco
+        perguntouRelogio = retomando
         mudar { a ->
             val rel = a.relatorios[id]
             val novoRel = if (retomando && rel != null) rel.copy(fim = null) else Relatorio(id, novo.inicioReuniao)
             a.copy(presidir = novo, relatorios = a.relatorios + (id to novoRel))
         }
+        agora = System.currentTimeMillis()
+        if (!retomando) verificarRelogio(0)
     }
 
     private fun passosDaSemana(): List<Passo> = semanaAtual()?.let { roteiro(it).passos }.orEmpty()
@@ -330,7 +370,9 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         avisado = false
         agora = System.currentTimeMillis()
         mudar { a -> registrarPassoAtual(a, fim = false).copy(presidir = p.copy(passo = n, inicioPasso = System.currentTimeMillis(), pausadoEm = null, acumuladoPausa = 0)) }
+        verificarRelogio(n)
     }
+
 
     fun relatorio(id: String): Relatorio? = dados.relatorios[id]
 
