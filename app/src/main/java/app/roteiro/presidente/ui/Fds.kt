@@ -201,7 +201,7 @@ fun FormFds(vm: AppVM, reu: AppVM.Reuniao, ed: Edicao, aoTemas: () -> Unit) {
             }
             else -> {
                 Row(verticalAlignment = Alignment.Top) {
-                    CampoF(CamposFds.DISC, s["f_ndisc"], ed, if (compacto) 110.dp else 130.dp, numero = true)
+                    CampoF(CamposFds.DISC, s["f_ndisc"], ed, if (compacto) 132.dp else 140.dp, numero = true)
                     Spacer(Modifier.width(8.dp))
                     OutlinedTextField(
                         value = e.valor(CamposFds.TEMA), onValueChange = { ed.valor(CamposFds.TEMA, it) },
