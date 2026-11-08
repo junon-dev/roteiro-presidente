@@ -54,6 +54,8 @@ data class Arquivo(
     val presidir: EstadoPresidir? = null,
     /** idioma -> (número -> título) */
     val canticos: Map<String, Map<String, String>> = emptyMap(),
+    /** idioma -> (número -> texto bíblico base, ex.: "Apocalipse 4:11") */
+    val textosCanticos: Map<String, Map<String, String>> = emptyMap(),
     /** "th"/"lmd" -> idioma -> número -> títulos oficiais */
     val oficiais: Map<String, Map<String, Map<String, LicaoOficial>>> = emptyMap(),
     /** semana -> tempo real da reunião */
@@ -107,6 +109,13 @@ class Repositorio(private val ctx: Context) {
     /** Títulos dos cânticos (Cante de Coração para Jeová) incluídos no app: idioma -> número -> título. */
     fun canticosEmbutidos(): Map<String, Map<String, String>> = try {
         ctx.assets.open("canticos.json").bufferedReader().use {
+            json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(), String.serializer())), it.readText())
+        }
+    } catch (e: Exception) { emptyMap() }
+
+    /** Textos bíblicos base dos cânticos incluídos no app: idioma -> número -> referência. */
+    fun textosCanticosEmbutidos(): Map<String, Map<String, String>> = try {
+        ctx.assets.open("textos_canticos.json").bufferedReader().use {
             json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(), String.serializer())), it.readText())
         }
     } catch (e: Exception) { emptyMap() }

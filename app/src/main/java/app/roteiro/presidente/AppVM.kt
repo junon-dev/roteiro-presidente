@@ -44,6 +44,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     val licoes: BaseLicoes = repo.licoes()
     val oficiaisEmbutidos = repo.oficiaisEmbutidos()
     val canticosEmbutidos = repo.canticosEmbutidos()
+    val textosEmbutidos = repo.textosCanticosEmbutidos()
 
     var dados by mutableStateOf(repo.carregar())
         private set
@@ -151,12 +152,22 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         dados.canticos[lang]?.get(n.toString()) ?: canticosEmbutidos[lang]?.get(n.toString())
     /** Todos os títulos (incluídos no app + importados/corrigidos pelo usuário). */
     fun canticos(lang: String): Map<String, String> = canticosEmbutidos[lang].orEmpty() + dados.canticos[lang].orEmpty()
-    fun definirCantico(lang: String, n: Int, titulo: String) = mudar { a ->
+    /** Texto bíblico base do cântico (ex.: "Apocalipse 4:11"). */
+    fun textoCantico(lang: String, n: Int): String? =
+        (dados.textosCanticos[lang]?.get(n.toString()) ?: textosEmbutidos[lang]?.get(n.toString()))?.takeIf { it.isNotBlank() }
+    fun definirCantico(lang: String, n: Int, titulo: String, texto: String? = null) = mudar { a ->
+        val k = n.toString()
         val atual = a.canticos[lang].orEmpty()
-        val novo = if (titulo.isBlank()) atual - n.toString() else atual + (n.toString() to titulo.trim())
-        a.copy(canticos = a.canticos + (lang to novo))
+        val novo = if (titulo.isBlank()) atual - k else atual + (k to titulo.trim())
+        val txAtual = a.textosCanticos[lang].orEmpty()
+        val txNovo = when {
+            texto == null -> txAtual
+            texto.isBlank() || texto.trim() == textosEmbutidos[lang]?.get(k) -> txAtual - k
+            else -> txAtual + (k to texto.trim())
+        }
+        a.copy(canticos = a.canticos + (lang to novo), textosCanticos = a.textosCanticos + (lang to txNovo))
     }
-    fun limparCanticos(lang: String) = mudar { it.copy(canticos = it.canticos - lang) }
+    fun limparCanticos(lang: String) = mudar { it.copy(canticos = it.canticos - lang, textosCanticos = it.textosCanticos - lang) }
     fun oficial(pub: String, lang: String, n: Int): LicaoOficial? =
         dados.oficiais[pub]?.get(lang)?.get(n.toString()) ?: oficiaisEmbutidos[pub]?.get(lang)?.get(n.toString())
     fun qtdOficiais(pub: String, lang: String): Int =
@@ -166,6 +177,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     fun roteiro(sem: Semana): RoteiroMontado = Roteiro.montar(
         sem, estado(sem.id), cfg, licoes, proximaDe(sem),
         tituloCantico = { n -> tituloCantico(sem.idioma, n) },
+        textoCantico = { n -> textoCantico(sem.idioma, n) },
         oficial = { pub, lang, n -> oficial(pub, lang, n) },
     )
 
@@ -204,7 +216,8 @@ class AppVM(app: Application) : AndroidViewModel(app) {
                 Textos.formatar(s["br_ok"], "n" to b.licoes.size, "p" to b.pub, "i" to Textos.NOME_IDIOMA[b.idioma])
             }
             is Importado.Cancioneiro -> {
-                mudar { a -> a.copy(canticos = a.canticos + (r.idioma to (a.canticos[r.idioma].orEmpty() + r.titulos))) }
+                mudar { a -> a.copy(canticos = a.canticos + (r.idioma to (a.canticos[r.idioma].orEmpty() + r.titulos)),
+                    textosCanticos = a.textosCanticos + (r.idioma to (a.textosCanticos[r.idioma].orEmpty() + r.textos))) }
                 Textos.formatar(s["can_ok"], "n" to r.titulos.size, "i" to Textos.NOME_IDIOMA[r.idioma])
             }
             is Importado.CancioneiroErrado -> Textos.formatar(s["can_antigo"], "t" to r.titulo, "s" to r.simbolo)

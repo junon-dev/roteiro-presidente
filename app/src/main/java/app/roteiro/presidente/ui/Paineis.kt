@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -278,7 +279,9 @@ fun PainelCanticos(vm: AppVM, aoFechar: () -> Unit) {
     var lang by rememberSaveable { mutableStateOf(vm.cfg.lang) }
     var num by rememberSaveable { mutableStateOf("") }
     var tit by rememberSaveable { mutableStateOf("") }
+    var txt by rememberSaveable { mutableStateOf("") }
     val abrir = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.importar(uris) }
+    val compacto = LocalCompacto.current
     val lista = vm.canticos(lang).entries.sortedBy { it.key.toIntOrNull() ?: 0 }
     Painel(s["canticos"], aoFechar, rolavel = false) {
         Text(s["can_info"], color = c.suave, fontSize = 15.sp)
@@ -288,20 +291,34 @@ fun PainelCanticos(vm: AppVM, aoFechar: () -> Unit) {
         }
         Text(s["can_adicionar"], fontWeight = FontWeight.Bold, color = c.tinta)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
-            OutlinedTextField(num, { v -> num = v.filter { it.isDigit() }.take(3); vm.tituloCantico(lang, num.toIntOrNull() ?: -1)?.let { tit = it } },
+            OutlinedTextField(num, { v -> num = v.filter { it.isDigit() }.take(3); val k = num.toIntOrNull() ?: -1
+                    vm.tituloCantico(lang, k)?.let { tit = it }; txt = vm.textoCantico(lang, k).orEmpty() },
                 label = { Text(s["can_numero"]) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.width(90.dp))
             Spacer(Modifier.width(8.dp))
             OutlinedTextField(tit, { tit = it }, label = { Text(s["can_titulo"]) }, singleLine = true, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = { num.toIntOrNull()?.let { vm.definirCantico(lang, it, tit); num = ""; tit = "" } }) { Text(s["salvar"]) }
+            if (!compacto) {
+                Spacer(Modifier.width(8.dp))
+                OutlinedTextField(txt, { txt = it }, label = { Text(s["can_texto"]) }, singleLine = true, modifier = Modifier.weight(0.6f))
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+            if (compacto) {
+                OutlinedTextField(txt, { txt = it }, label = { Text(s["can_texto"]) }, singleLine = true, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+            } else Spacer(Modifier.weight(1f))
+            Button(onClick = { num.toIntOrNull()?.let { vm.definirCantico(lang, it, tit, txt); num = ""; tit = ""; txt = "" } }) { Text(s["salvar"]) }
         }
         if (lista.isEmpty()) Text(Textos.formatar(s["can_vazio"], "i" to Textos.NOME_IDIOMA[lang]), color = c.suave, modifier = Modifier.padding(top = 10.dp))
         LazyColumn(Modifier.weight(1f, fill = false)) {
             items(lista, key = { it.key }) { (n, t) ->
-                Row(Modifier.fillMaxWidth().clickable { num = n; tit = t }.padding(vertical = 7.dp)) {
+                val base = vm.textoCantico(lang, n.toIntOrNull() ?: -1)
+                Row(Modifier.fillMaxWidth().clickable { num = n; tit = t; txt = base.orEmpty() }.padding(vertical = 7.dp)) {
                     Text(n, fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.width(48.dp))
-                    Text(t, color = c.tinta, modifier = Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) {
+                        Text(t, color = c.tinta)
+                        if (base != null) Text(base, color = c.suave, fontSize = 14.sp, fontStyle = FontStyle.Italic)
+                    }
                 }
                 HorizontalDivider(color = c.linha)
             }

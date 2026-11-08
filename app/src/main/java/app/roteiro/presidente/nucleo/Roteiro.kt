@@ -160,6 +160,7 @@ object Roteiro {
     /**
      * @param proxima resumo da semana seguinte (para os comentários finais)
      * @param tituloCantico título do cântico pelo número (ou null)
+     * @param textoCantico texto bíblico base do cântico (ou null)
      */
     fun montar(
         sem: Semana,
@@ -168,6 +169,7 @@ object Roteiro {
         lic: BaseLicoes,
         proxima: Proxima?,
         tituloCantico: (Int) -> String? = { null },
+        textoCantico: (Int) -> String? = { null },
         oficial: FonteOficial = FonteOficial { _, _, _ -> null },
     ): RoteiroMontado {
         val lang = sem.idioma
@@ -201,8 +203,15 @@ object Roteiro {
 
         fun cant(n: Int?): Pair<String, String?> {
             if (n == null) return "?" to null
-            val tit = tituloCantico(n)
-            return (if (tit.isNullOrBlank()) n.toString() else "$n, ${q.first}$tit${q.second}") to tit?.takeIf { it.isNotBlank() }
+            val tit = tituloCantico(n)?.takeIf { it.isNotBlank() }
+            val base = textoCantico(n)?.takeIf { it.isNotBlank() }
+            val falado = buildString {
+                append(n)
+                if (tit != null) append(", ").append(q.first).append(tit).append(q.second)
+                if (base != null) append(", ").append(Textos.formatar(s["cant_base"], "t" to base))
+            }
+            val sub = listOfNotNull(tit, base).joinToString("  ·  ").ifEmpty { null }
+            return falado to sub
         }
         fun cfLista(soSC: Boolean): List<String> {
             val itensCf = s.lista("cf_itens").map { Textos.formatar(it, "prox" to textoProxima(proxima, lang)) }

@@ -12,6 +12,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import app.roteiro.presidente.nucleo.Seg
 import org.junit.Test
 import java.io.File
 
@@ -46,6 +47,28 @@ class RoteiroTest {
         for (lang in listOf("pt", "es")) {
             assertEquals(20, of["th"]?.get(lang)?.size)
             assertEquals(12, of["lmd"]?.get(lang)?.size)
+        }
+    }
+
+    @Test
+    fun canticosAnunciadosComTextoBase() {
+        val tx = json.decodeFromString(MapSerializer(String.serializer(),
+            MapSerializer(String.serializer(), String.serializer())),
+            File("src/main/assets/textos_canticos.json").readText())
+        assertTrue((tx["pt"]?.size ?: 0) >= 150 && (tx["es"]?.size ?: 0) >= 150)
+        assertEquals("Apocalipse 4:11", tx["pt"]?.get("1"))
+        assertEquals("Apocalipsis 4:11", tx["es"]?.get("1"))
+        for (sem in semanas) {
+            val r = Roteiro.montar(sem, EstadoSemana(), Config(), licoes, null,
+                tituloCantico = { n -> "Título $n" }, textoCantico = { n -> tx[sem.idioma]?.get(n.toString()) })
+            val blocos = r.itens.filterIsInstance<ItemRoteiro.BlocoR>().map { it.b }.associateBy { it.id }
+            for ((id, n) in listOf("abertura" to sem.canticoInicial, "meio" to sem.canticoMeio, "fim" to sem.canticoFinal)) {
+                if (n == null) continue
+                val base = tx[sem.idioma]?.get(n.toString()) ?: continue
+                val fala = blocos[id]!!.falas.flatten().filterIsInstance<Seg.Txt>().joinToString("") { it.s }
+                assertTrue("${sem.id} $id: $fala", fala.contains(base) && fala.contains("Título $n"))
+                assertTrue("${sem.id} $id subtítulo", blocos[id]!!.subtitulo!!.contains(base))
+            }
         }
     }
 

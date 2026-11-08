@@ -19,12 +19,13 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipInputStream
+import app.roteiro.presidente.nucleo.Biblia
 
 /** Resultado da leitura de um arquivo escolhido pelo usuário. */
 sealed interface Importado {
     data class Apostila(val r: ResultadoLeitura) : Importado
     data class Brochura(val b: BrochuraLida) : Importado
-    data class Cancioneiro(val idioma: String, val titulos: Map<String, String>) : Importado
+    data class Cancioneiro(val idioma: String, val titulos: Map<String, String>, val textos: Map<String, String> = emptyMap()) : Importado
     data class CancioneiroErrado(val titulo: String, val simbolo: String) : Importado
     data class Falha(val motivo: String) : Importado
 }
@@ -122,6 +123,7 @@ class Importador(private val ctx: Context) {
         val tmp = File(ctx.cacheDir, "cancioneiro.db")
         tmp.writeBytes(dbBytes)
         val titulos = LinkedHashMap<String, String>()
+        val textos = LinkedHashMap<String, String>()
         try {
             SQLiteDatabase.openDatabase(tmp.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                 // O número vem em ChapterNumber; se faltar, tenta o início do título ("1. Título")
@@ -135,10 +137,20 @@ class Importador(private val ctx: Context) {
                         if (n > 0 && t.isNotEmpty() && !titulos.containsKey(n.toString())) titulos[n.toString()] = t
                     }
                 }
+                // Texto bíblico base de cada cântico: as citações do 1º bloco (logo abaixo do título)
+                try {
+                    val links = LinkedHashMap<Int, MutableList<String>>()
+                    db.rawQuery("SELECT d.ChapterNumber, h.Link FROM BibleCitation b JOIN Document d ON d.DocumentId = b.DocumentId " +
+                        "JOIN Hyperlink h ON h.HyperlinkId = b.HyperlinkId WHERE d.ChapterNumber IS NOT NULL AND b.BlockNumber = 1 " +
+                        "ORDER BY d.ChapterNumber, b.SortPosition", null).use { c ->
+                        while (c.moveToNext()) links.getOrPut(c.getInt(0)) { mutableListOf() }.add(c.getString(1) ?: "")
+                    }
+                    for ((n, l) in links) Biblia.formatar(l, idioma).takeIf { it.isNotBlank() }?.let { textos[n.toString()] = it }
+                } catch (_: Exception) { /* edição sem essas tabelas: fica só com os títulos */ }
             }
         } finally {
             tmp.delete()
         }
-        return if (titulos.isEmpty()) Importado.Falha("nenhum título encontrado") else Importado.Cancioneiro(idioma, titulos)
+        return if (titulos.isEmpty()) Importado.Falha("nenhum título encontrado") else Importado.Cancioneiro(idioma, titulos, textos)
     }
 }
