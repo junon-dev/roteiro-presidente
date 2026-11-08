@@ -5,6 +5,7 @@ import app.roteiro.presidente.nucleo.BaseLicoes
 import app.roteiro.presidente.nucleo.Config
 import app.roteiro.presidente.nucleo.EstadoPresidir
 import app.roteiro.presidente.nucleo.EstadoSemana
+import app.roteiro.presidente.nucleo.EventoEspecial
 import app.roteiro.presidente.nucleo.LicaoOficial
 import app.roteiro.presidente.nucleo.Relatorio
 import app.roteiro.presidente.nucleo.Semana
@@ -60,6 +61,12 @@ data class Arquivo(
     val oficiais: Map<String, Map<String, Map<String, LicaoOficial>>> = emptyMap(),
     /** semana -> tempo real da reunião */
     val relatorios: Map<String, Relatorio> = emptyMap(),
+    /** "especial"/"celebracao" -> idioma -> orientações importadas ou corrigidas (S-125, S-126) */
+    val eventos: Map<String, Map<String, EventoEspecial>> = emptyMap(),
+    /** idioma -> número -> tema (lista S-99 importada) */
+    val discursos: Map<String, Map<String, String>> = emptyMap(),
+    /** idioma -> número do discurso -> datas (AAAA-MM-DD) registradas à mão */
+    val historico: Map<String, Map<String, List<String>>> = emptyMap(),
 )
 
 class Repositorio(private val ctx: Context) {
@@ -116,6 +123,20 @@ class Repositorio(private val ctx: Context) {
     /** Textos bíblicos base dos cânticos incluídos no app: idioma -> número -> referência. */
     fun textosCanticosEmbutidos(): Map<String, Map<String, String>> = try {
         ctx.assets.open("textos_canticos.json").bufferedReader().use {
+            json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(), String.serializer())), it.readText())
+        }
+    } catch (e: Exception) { emptyMap() }
+
+    /** Orientações dos eventos especiais incluídas no app: tipo -> idioma -> evento. */
+    fun eventosEmbutidos(): Map<String, Map<String, EventoEspecial>> = try {
+        ctx.assets.open("eventos.json").bufferedReader().use {
+            json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(), EventoEspecial.serializer())), it.readText())
+        }
+    } catch (e: Exception) { emptyMap() }
+
+    /** Temas dos discursos públicos (S-99) incluídos no app: idioma -> número -> tema. */
+    fun discursosEmbutidos(): Map<String, Map<String, String>> = try {
+        ctx.assets.open("discursos.json").bufferedReader().use {
             json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(), String.serializer())), it.readText())
         }
     } catch (e: Exception) { emptyMap() }

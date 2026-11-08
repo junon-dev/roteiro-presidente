@@ -67,6 +67,8 @@ data class Config(
     val fonte: Int = 2,          // tamanho do texto: 0 (menor) a 5 (maior); 2 = normal
     val palco: Boolean = true,   // modo palco ao presidir (esconde campos, texto maior)
     val pastaBackup: String? = null,   // pasta (URI) da cópia automática
+    val inicioFds: String = "09:00",   // horário da reunião do fim de semana
+    val diaFds: Int = 7,               // 6 = sábado, 7 = domingo
 )
 
 /** Estado de uma semana: visita do SC, salas adicionais e valores digitados (nomes, anotações, marcações). */

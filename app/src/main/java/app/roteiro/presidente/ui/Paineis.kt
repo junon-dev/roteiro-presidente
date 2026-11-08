@@ -172,6 +172,15 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
             }) { Text(vm.cfg.inicio, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         }
         Linha(s["abertura"]) { Contador(vm.cfg.abertura, 1, 10) { v -> vm.mudarCfg { it.copy(abertura = v) } } }
+        Linha(s["horaIniFds"]) {
+            TextButton(onClick = {
+                val m = app.roteiro.presidente.nucleo.Roteiro.minDe(vm.cfg.inicioFds)
+                android.app.TimePickerDialog(ctx, { _, h, mi -> vm.mudarCfg { it.copy(inicioFds = "%02d:%02d".format(h, mi)) } }, m / 60, m % 60, true).show()
+            }) { Text(vm.cfg.inicioFds, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+        }
+        Linha(s["diaFds"], largo = true) {
+            Opcoes(listOf("6" to s["sabado"], "7" to s["domingo"]), vm.cfg.diaFds.toString()) { d -> vm.mudarCfg { it.copy(diaFds = d.toInt()) } }
+        }
         Linha(s["canticoMeio"]) { Contador(vm.cfg.meio, 1, 10) { v -> vm.mudarCfg { it.copy(meio = v) } } }
         Linha(s["som"]) { Switch(vm.cfg.som, { on -> vm.mudarCfg { it.copy(som = on) } }) }
         Linha(s["vibrar"]) { Switch(vm.cfg.vibrar, { on -> vm.mudarCfg { it.copy(vibrar = on) } }) }
@@ -223,6 +232,17 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
                     if (importado) TextButton(onClick = { vm.removerOficiais(pub, lang) }) { Text(s["ap_rem"], color = c.erro) }
                 } else Text(s["br_nenhuma"], color = c.suave)
             }
+        }
+
+        Text(s["te_t"] + " (S-99)", fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 14.dp))
+        Text(listOf("pt", "es").joinToString(" · ") { "${Textos.NOME_IDIOMA[it]}: ${vm.discursos(it).size}" }, color = c.suave,
+            modifier = Modifier.padding(vertical = 4.dp))
+        Text(s["ev_t"], fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 10.dp))
+        for (lang in listOf("pt", "es")) {
+            val esp = vm.evento("especial", lang)
+            val cel = vm.evento("celebracao", lang)
+            Text("${Textos.NOME_IDIOMA[lang]}: ${s["ev_esp"]} ${esp?.ano ?: ""} “${esp?.tema ?: "—"}” · ${s["ev_cel"]} “${cel?.tema ?: "—"}”",
+                color = c.suave, fontSize = 14.sp, modifier = Modifier.padding(vertical = 2.dp))
         }
 
         Text(s["canticos"], fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 14.dp))
@@ -374,7 +394,7 @@ fun PainelLicoes(vm: AppVM, aoFechar: () -> Unit) {
 
 /* ---------- Relatório do tempo da reunião ---------- */
 @Composable
-fun PainelRelatorio(vm: AppVM, sem: app.roteiro.presidente.nucleo.Semana, aoFechar: () -> Unit) {
+fun PainelRelatorio(vm: AppVM, sem: AppVM.Reuniao, aoFechar: () -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
     val ctx = LocalContext.current
@@ -383,7 +403,7 @@ fun PainelRelatorio(vm: AppVM, sem: app.roteiro.presidente.nucleo.Semana, aoFech
     val fmtH = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
     fun mmss(seg: Long): String { val a = Math.abs(seg); return (if (seg < 0) "−" else "") + "${a / 60}:" + (a % 60).toString().padStart(2, '0') }
     Painel(s["relatorio"], aoFechar) {
-        Text("${sem.periodo} · ${sem.leitura}", color = c.suave, fontWeight = FontWeight.SemiBold)
+        Text("${sem.titulo} · ${sem.periodo}", color = c.suave, fontWeight = FontWeight.SemiBold)
         if (rel == null) { Text(s["rel_vazio"], color = c.suave, modifier = Modifier.padding(top = 12.dp)); return@Painel }
         // resumo
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 12.dp)) {
@@ -397,8 +417,9 @@ fun PainelRelatorio(vm: AppVM, sem: app.roteiro.presidente.nucleo.Semana, aoFech
             Caixa(s["rel_fim"], rel.fim?.let { fmtH.format(java.util.Date(it)) } ?: s["rel_emAndamento"])
             rel.fim?.let {
                 val dur = (it - rel.inicio) / 1000
-                Caixa(s["rel_duracao"], "${dur / 3600}:" + ((dur / 60) % 60).toString().padStart(2, '0') + " / 1:45",
-                    if (dur > 105 * 60 + 59) c.erro else c.ok)
+                val tot = sem.rot.total
+                Caixa(s["rel_duracao"], "${dur / 3600}:" + ((dur / 60) % 60).toString().padStart(2, '0') + " / ${tot / 60}:" + (tot % 60).toString().padStart(2, '0'),
+                    if (dur > tot * 60 + 59) c.erro else c.ok)
             }
         }
         HorizontalDivider(color = c.linha)

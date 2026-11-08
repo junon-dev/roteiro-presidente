@@ -15,6 +15,10 @@ import app.roteiro.presidente.dados.Importado
 import app.roteiro.presidente.dados.Importador
 import app.roteiro.presidente.dados.Repositorio
 import app.roteiro.presidente.nucleo.BaseLicoes
+import app.roteiro.presidente.nucleo.CamposFds
+import app.roteiro.presidente.nucleo.EventoEspecial
+import app.roteiro.presidente.nucleo.ResumoFds
+import app.roteiro.presidente.nucleo.RoteiroFds
 import app.roteiro.presidente.nucleo.Config
 import app.roteiro.presidente.nucleo.EstadoPresidir
 import app.roteiro.presidente.nucleo.EstadoSemana
@@ -45,10 +49,21 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     val oficiaisEmbutidos = repo.oficiaisEmbutidos()
     val canticosEmbutidos = repo.canticosEmbutidos()
     val textosEmbutidos = repo.textosCanticosEmbutidos()
+    val eventosEmbutidos = repo.eventosEmbutidos()
+    val discursosEmbutidos = repo.discursosEmbutidos()
 
     var dados by mutableStateOf(repo.carregar())
         private set
     var semanaId by mutableStateOf<String?>(null)
+    /** Qual reunião está na tela: "meio" (meio de semana), "fds" (fim de semana) ou "cel" (Celebração). */
+    var modo by mutableStateOf(if (LocalDate.now().dayOfWeek.value >= 6) "fds" else "meio")
+        private set
+    /** Fim de semana escolhido: a segunda-feira (AAAA-MM-DD) da semana. */
+    var fdsSemana by mutableStateOf(segundaDe(LocalDate.now()))
+        private set
+    /** Ano da Celebração na tela. */
+    var celAno by mutableStateOf(LocalDate.now().let { if (it.monthValue > 4) it.year + 1 else it.year })
+        private set
     var agora by mutableLongStateOf(System.currentTimeMillis())
     var ocupado by mutableStateOf<String?>(null)
         private set
@@ -66,10 +81,18 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         escolherSemanaPadrao()
         // Se o app foi fechado no meio da reunião, volta para a mesma semana no modo Presidir
         dados.presidir?.let { pr ->
-            val sem = todasSemanas().firstOrNull { it.id == pr.sem }
-            if (pr.ativo && sem != null && System.currentTimeMillis() - pr.inicioPasso < 3 * 3600_000L) {
-                if (sem.idioma != cfg.lang) dados = dados.copy(cfg = cfg.copy(lang = sem.idioma))
-                semanaId = sem.id
+            val recente = pr.ativo && System.currentTimeMillis() - pr.inicioPasso < 3 * 3600_000L
+            val partes = pr.sem.split(":")
+            if (recente && partes.size == 3 && partes[0] in listOf("fds", "cel")) {
+                if (partes[1] != cfg.lang) dados = dados.copy(cfg = cfg.copy(lang = partes[1]))
+                if (partes[0] == "fds") { modo = "fds"; fdsSemana = partes[2] } else { modo = "cel"; celAno = partes[2].toIntOrNull() ?: celAno }
+            } else {
+                val sem = todasSemanas().firstOrNull { it.id == pr.sem }
+                if (recente && sem != null) {
+                    if (sem.idioma != cfg.lang) dados = dados.copy(cfg = cfg.copy(lang = sem.idioma))
+                    semanaId = sem.id
+                    modo = "meio"
+                }
             }
         }
     }
@@ -112,7 +135,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         semanaId = (alvo ?: lst.first()).id
     }
 
-    fun irParaSemana(id: String) { if (presidindo) pararPresidir(); semanaId = id }
+    fun irParaSemana(id: String) { if (presidindo) pararPresidir(); semanaId = id; modo = "meio" }
     fun moverSemana(d: Int) {
         val lst = semanasIdioma()
         val i = lst.indexOfFirst { it.id == semanaId }
@@ -139,11 +162,184 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     private fun mudarEstado(id: String, f: (EstadoSemana) -> EstadoSemana) =
         mudar { a -> a.copy(semanas = a.semanas + (id to EstadoSemanaDto.de(f(estado(id))))) }
 
-    fun valor(k: String, v: String) { val id = semanaId ?: return; mudarEstado(id) { it.copy(v = it.v + (k to v)) } }
+    fun valor(k: String, v: String) {
+        val id = idAtual() ?: return
+        mudarEstado(id) {
+            var m = it.v + (k to v)
+            // no fim de semana, o número do discurso preenche o tema pela lista S-99
+            if (modo == "fds" && k == CamposFds.DISC) {
+                val t = tituloDiscurso(cfg.lang, v.trim().toIntOrNull())
+                if (t != null && !naoUse(t)) m = m + (CamposFds.TEMA to t)
+            }
+            it.copy(v = m)
+        }
+    }
     fun marcar(k: String, on: Boolean) = valor(k, on.toString())
-    fun setSC(on: Boolean) { val id = semanaId ?: return; mudarEstado(id) { it.copy(sc = on) } }
-    fun setSalas(on: Boolean) { val id = semanaId ?: return; mudarEstado(id) { it.copy(salas = on) } }
-    fun limparSemana() { val id = semanaId ?: return; mudar { it.copy(semanas = it.semanas - id) } }
+    fun setSC(on: Boolean) { val id = idAtual() ?: return; mudarEstado(id) { it.copy(sc = on) } }
+    fun setSalas(on: Boolean) { val id = idAtual() ?: return; mudarEstado(id) { it.copy(salas = on) } }
+    fun limparSemana() { val id = idAtual() ?: return; mudar { it.copy(semanas = it.semanas - id) } }
+
+    /* ---------- reunião na tela (meio de semana, fim de semana ou Celebração) ---------- */
+    data class Reuniao(
+        val id: String,
+        val tipo: String,
+        val idioma: String,
+        val sup: String,          // linha de cima (reunião · data)
+        val titulo: String,       // título grande
+        val periodo: String,      // usado no relatório e na impressão
+        val rot: RoteiroMontado,
+        val estado: EstadoSemana,
+        val inicio: String,
+    )
+
+    fun idFds(lang: String, seg: String) = "fds:$lang:$seg"
+    fun idCel(lang: String, ano: Int) = "cel:$lang:$ano"
+    fun idAtual(): String? = when (modo) {
+        "fds" -> idFds(cfg.lang, fdsSemana)
+        "cel" -> idCel(cfg.lang, celAno)
+        else -> semanaId
+    }
+
+    fun mudarModo(m: String) {
+        if (m == modo) return
+        if (presidindo) pararPresidir()
+        modo = m
+    }
+
+    fun inicioAtual(): String = when (modo) {
+        "fds" -> cfg.inicioFds
+        "cel" -> estado(idCel(cfg.lang, celAno)).valor(CamposFds.HORA).ifBlank { "19:30" }
+        else -> cfg.inicio
+    }
+    fun definirInicio(hhmm: String) = when (modo) {
+        "fds" -> mudarCfg { it.copy(inicioFds = hhmm) }
+        "cel" -> valor(CamposFds.HORA, hhmm)
+        else -> mudarCfg { it.copy(inicio = hhmm) }
+    }
+
+    fun reuniaoAtual(): Reuniao? {
+        val s = tx
+        val lang = cfg.lang
+        return when (modo) {
+            "fds" -> {
+                val id = idFds(lang, fdsSemana)
+                val e = estado(id)
+                val data = dataFdsTexto(fdsSemana, lang)
+                val tit = when { e.sc -> s["fds_t_sc"]; e.marcado(CamposFds.ESPECIAL) -> s["fds_t_esp"]; else -> s["fds_t_normal"] }
+                Reuniao(id, "fds", lang, "${s["fds_meeting"]} · $data", tit, data, roteiroFds(lang, fdsSemana), e, cfg.inicioFds)
+            }
+            "cel" -> {
+                val id = idCel(lang, celAno)
+                val e = estado(id)
+                val data = e.valor(CamposFds.DATA).ifBlank { celAno.toString() }
+                Reuniao(id, "cel", lang, "${s["cel_meeting"]} · $data", Textos.formatar(s["cel_t"], "a" to celAno),
+                    Textos.formatar(s["cel_t"], "a" to celAno), roteiroCel(lang, celAno), e, inicioAtual())
+            }
+            else -> {
+                val sem = semanaAtual() ?: return null
+                val e = estado(sem.id)
+                Reuniao(sem.id, "meio", sem.idioma, "${s["meeting"]} · ${sem.leitura} · ${sem.periodo}",
+                    if (e.sc) s["sc"] else s["normal"], "${sem.periodo} (${sem.leitura})", roteiro(sem), e, cfg.inicio)
+            }
+        }
+    }
+
+    /* ---------- fim de semana ---------- */
+    fun segundaDe(d: LocalDate): String = d.minusDays((d.dayOfWeek.value - 1).toLong()).toString()
+    fun dataReuniaoFds(seg: String): LocalDate = LocalDate.parse(seg).plusDays((cfg.diaFds.coerceIn(6, 7) - 1).toLong())
+    private fun localeDe(lang: String) = if (lang == "es") java.util.Locale("es") else java.util.Locale("pt", "BR")
+    fun dataFdsTexto(seg: String, lang: String = cfg.lang): String {
+        val f = java.time.format.DateTimeFormatter.ofPattern(if (lang == "es") "EEEE d 'de' MMMM" else "EEEE, d 'de' MMMM", localeDe(lang))
+        return dataReuniaoFds(seg).format(f)
+    }
+    fun dataCurta(d: LocalDate): String = "%02d/%02d/%d".format(d.dayOfMonth, d.monthValue, d.year)
+
+    fun irParaFds(seg: String) { if (presidindo) pararPresidir(); fdsSemana = seg; modo = "fds" }
+    fun moverFds(d: Int) = irParaFds(LocalDate.parse(fdsSemana).plusWeeks(d.toLong()).toString())
+    fun moverCel(d: Int) { if (presidindo) pararPresidir(); celAno += d }
+
+    fun resumoFds(lang: String, seg: String): ResumoFds = RoteiroFds.resumo(seg, estado(idFds(lang, seg)))
+
+    fun roteiroFds(lang: String, seg: String): RoteiroMontado = RoteiroFds.montar(
+        lang, estado(idFds(lang, seg)), cfg.inicioFds, evento("especial", lang),
+        resumoFds(lang, LocalDate.parse(seg).plusWeeks(1).toString()),
+        tituloCantico = { n -> tituloCantico(lang, n) }, textoCantico = { n -> textoCantico(lang, n) },
+    )
+    fun roteiroCel(lang: String, ano: Int): RoteiroMontado {
+        val e = estado(idCel(lang, ano))
+        return RoteiroFds.montarCelebracao(lang, e, e.valor(CamposFds.HORA).ifBlank { "19:30" }, evento("celebracao", lang),
+            tituloCantico = { n -> tituloCantico(lang, n) }, textoCantico = { n -> textoCantico(lang, n) })
+    }
+
+    /** Semanas da agenda: da atual até 26 semanas à frente (e, se pedido, as 12 anteriores). */
+    fun semanasAgenda(anteriores: Boolean): List<String> {
+        val base = LocalDate.parse(segundaDe(LocalDate.now()))
+        return ((if (anteriores) -12 else 0)..26).map { base.plusWeeks(it.toLong()).toString() }
+    }
+
+    /* ---------- temas dos discursos (S-99) e histórico ---------- */
+    fun discursos(lang: String): Map<String, String> = discursosEmbutidos[lang].orEmpty() + dados.discursos[lang].orEmpty()
+    fun tituloDiscurso(lang: String, n: Int?): String? = n?.let { discursos(lang)[it.toString()] }
+    fun naoUse(t: String) = t.trim().startsWith("(")
+
+    /** Datas em que cada discurso foi (ou será) feito: fins de semana do app + datas registradas à mão. */
+    fun historico(lang: String): Map<Int, List<LocalDate>> {
+        val m = HashMap<Int, MutableSet<LocalDate>>()
+        val pref = "fds:$lang:"
+        for ((id, dto) in dados.semanas) if (id.startsWith(pref)) {
+            val r = RoteiroFds.resumo(id.removePrefix(pref), dto.paraModelo())
+            val n = r.discurso.toIntOrNull() ?: continue
+            if (r.sc || r.especial) continue
+            m.getOrPut(n) { HashSet() }.add(dataReuniaoFds(r.semana))
+        }
+        dados.historico[lang].orEmpty().forEach { (k, l) ->
+            val n = k.toIntOrNull() ?: return@forEach
+            l.forEach { d -> runCatching { LocalDate.parse(d) }.getOrNull()?.let { m.getOrPut(n) { HashSet() }.add(it) } }
+        }
+        return m.mapValues { it.value.sorted() }
+    }
+    fun datasManuais(lang: String, n: Int): List<String> = dados.historico[lang]?.get(n.toString()).orEmpty()
+    fun registrarData(lang: String, n: Int, d: LocalDate) = mudar { a ->
+        val porLang = a.historico[lang].orEmpty()
+        val l = (porLang[n.toString()].orEmpty() + d.toString()).distinct().sorted()
+        a.copy(historico = a.historico + (lang to (porLang + (n.toString() to l))))
+    }
+    fun apagarData(lang: String, n: Int, d: String) = mudar { a ->
+        val porLang = a.historico[lang].orEmpty()
+        val l = porLang[n.toString()].orEmpty() - d
+        a.copy(historico = a.historico + (lang to (if (l.isEmpty()) porLang - n.toString() else porLang + (n.toString() to l))))
+    }
+
+    /** Aviso ao escolher um discurso: "Não use", feito há poucos meses, ou já na agenda em outra data. */
+    fun avisoDiscurso(lang: String, seg: String, n: Int?): String? {
+        if (n == null) return null
+        val s = tx
+        val t = tituloDiscurso(lang, n)
+        if (t != null && naoUse(t)) return s["nao_use"]
+        val esta = dataReuniaoFds(seg)
+        val outras = historico(lang)[n].orEmpty().filter { it != esta }
+        val hoje = LocalDate.now()
+        val antes = outras.filter { it < esta }.maxOrNull()
+        val depois = outras.filter { it > esta && it >= hoje }.minOrNull()
+        val msgs = ArrayList<String>()
+        if (antes != null) {
+            val meses = java.time.temporal.ChronoUnit.MONTHS.between(antes, esta).toInt()
+            msgs.add(if (meses < 12) Textos.formatar(s["hist_recente"], "m" to meses, "d" to dataCurta(antes))
+                     else Textos.formatar(s["hist_feito"], "d" to dataCurta(antes)))
+        }
+        if (depois != null) msgs.add(Textos.formatar(s["hist_agendado"], "d" to dataCurta(depois)))
+        return msgs.joinToString(" ").ifBlank { null }
+    }
+
+    /* ---------- eventos especiais (S-125, S-126) ---------- */
+    fun evento(tipo: String, lang: String): EventoEspecial? = dados.eventos[tipo]?.get(lang) ?: eventosEmbutidos[tipo]?.get(lang)
+    fun eventoCorrigido(tipo: String, lang: String) = dados.eventos[tipo]?.containsKey(lang) == true
+    fun salvarEvento(ev: EventoEspecial) = mudar { a ->
+        a.copy(eventos = a.eventos + (ev.tipo to (a.eventos[ev.tipo].orEmpty() + (ev.idioma to ev))))
+    }
+    fun restaurarEvento(tipo: String, lang: String) = mudar { a ->
+        a.copy(eventos = a.eventos + (tipo to (a.eventos[tipo].orEmpty() - lang)))
+    }
 
     fun mudarCfg(f: (Config) -> Config) = mudar { it.copy(cfg = f(it.cfg)) }
 
@@ -221,6 +417,15 @@ class AppVM(app: Application) : AndroidViewModel(app) {
                 Textos.formatar(s["can_ok"], "n" to r.titulos.size, "i" to Textos.NOME_IDIOMA[r.idioma])
             }
             is Importado.CancioneiroErrado -> Textos.formatar(s["can_antigo"], "t" to r.titulo, "s" to r.simbolo)
+            is Importado.Evento -> {
+                salvarEvento(r.ev)
+                Textos.formatar(s["ev_ok"], "t" to (if (r.ev.tipo == "especial") s["ev_esp"] else s["ev_cel"]) + (r.ev.tema.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""),
+                    "i" to Textos.NOME_IDIOMA[r.ev.idioma])
+            }
+            is Importado.Discursos -> {
+                mudar { a -> a.copy(discursos = a.discursos + (r.l.idioma to r.l.titulos)) }
+                Textos.formatar(s["disc_ok"], "n" to r.l.titulos.size, "i" to Textos.NOME_IDIOMA[r.l.idioma])
+            }
             is Importado.Falha -> Textos.formatar(s["ap_erro"], "f" to nome, "e" to r.motivo)
         }
     }
@@ -290,7 +495,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     fun importarTexto(t: String): Boolean = try { substituir(repo.deTexto(t)); true } catch (e: Exception) { false }
 
     /* ---------- modo Presidir ---------- */
-    val presidindo: Boolean get() = dados.presidir?.ativo == true && dados.presidir?.sem == semanaId
+    val presidindo: Boolean get() = dados.presidir?.ativo == true && dados.presidir?.sem == idAtual()
     val presidir: EstadoPresidir? get() = dados.presidir
     private var avisado = false
 
@@ -302,7 +507,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     /** Minutos desde o horário marcado para a reunião (ex.: 20:00), se a reunião já devia ter começado. */
     private fun minutosDesdeHorario(): Int? {
         val t = java.time.LocalTime.now()
-        val m = t.hour * 60 + t.minute - Roteiro.minDe(cfg.inicio)
+        val m = t.hour * 60 + t.minute - Roteiro.minDe(inicioAtual())
         return m.takeIf { it in 2..170 }
     }
 
@@ -311,11 +516,11 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         if (perguntouRelogio) return
         val p = passosDaSemana().getOrNull(alvo) ?: return
         val jaContado = decorridoReuniao() / 60
-        val soma = (p.ini - Roteiro.minDe(cfg.inicio)).takeIf { it - jaContado >= 3 }
+        val soma = (p.ini - Roteiro.minDe(inicioAtual())).takeIf { it - jaContado >= 3 }
         val hor = minutosDesdeHorario()?.takeIf { it - jaContado >= 3 }
         if (soma == null && hor == null) return
         perguntouRelogio = true
-        pedidoRelogio = PedidoRelogio(hor, soma, cfg.inicio)
+        pedidoRelogio = PedidoRelogio(hor, soma, inicioAtual())
     }
 
     /** Faz o relógio da reunião contar [minutos] já passados (null = manter a partir de agora). */
@@ -338,7 +543,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     var palco by mutableStateOf(dados.cfg.palco)
 
     fun iniciarPresidir(totalPassos: Int) {
-        val id = semanaId ?: return
+        val id = idAtual() ?: return
         val salvo = dados.presidir
         val agoraMs = System.currentTimeMillis()
         val retomando = salvo != null && salvo.sem == id && salvo.passo < totalPassos && agoraMs - salvo.inicioPasso < 3 * 3600_000L
@@ -356,7 +561,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         if (!retomando) verificarRelogio(0)
     }
 
-    private fun passosDaSemana(): List<Passo> = semanaAtual()?.let { roteiro(it).passos }.orEmpty()
+    private fun passosDaSemana(): List<Passo> = reuniaoAtual()?.rot?.passos.orEmpty()
     private fun chave(p: Passo) = if (p.cons) "${p.bloco}#c" else p.bloco
 
     /** Soma ao relatório o tempo gasto no passo atual (chamado ao trocar de parte ou encerrar). */
@@ -392,28 +597,28 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     /** Linhas do relatório: cada passo do roteiro com o tempo previsto e o real. */
     data class LinhaRelatorio(val hora: String, val titulo: String, val previstoSeg: Int, val realSeg: Long?)
 
-    fun linhasRelatorio(sem: Semana): List<LinhaRelatorio> {
-        val rel = relatorio(sem.id) ?: return emptyList()
-        val emCurso = presidindo && dados.presidir?.sem == sem.id
+    fun linhasRelatorio(r: Reuniao): List<LinhaRelatorio> {
+        val rel = relatorio(r.id) ?: return emptyList()
+        val emCurso = presidindo && dados.presidir?.sem == r.id
         val atual = if (emCurso) passosDaSemana().getOrNull(dados.presidir!!.passo) else null
-        return roteiro(sem).passos.map { p ->
+        return r.rot.passos.map { p ->
             var real = rel.partes[chave(p)]
             if (atual != null && atual == p) real = (real ?: 0) + Math.round(decorrido())
             LinhaRelatorio(Roteiro.hm(p.ini), p.titulo, p.dur * 60, real)
         }
     }
 
-    fun textoRelatorio(sem: Semana): String {
+    fun textoRelatorio(r: Reuniao): String {
         val s = tx
-        val rel = relatorio(sem.id) ?: return ""
+        val rel = relatorio(r.id) ?: return ""
         val fmtH = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
         fun mmss(seg: Long): String { val a = Math.abs(seg); return (if (seg < 0) "-" else "") + "${a / 60}:" + (a % 60).toString().padStart(2, '0') }
         val sb = StringBuilder()
-        sb.append("${s["relatorio"]} — ${sem.periodo} (${sem.leitura})\n")
+        sb.append("${s["relatorio"]} — ${r.titulo} · ${r.periodo}\n")
         sb.append("${s["rel_inicio"]}: ${fmtH.format(java.util.Date(rel.inicio))}")
-        rel.fim?.let { sb.append(" · ${s["rel_fim"]}: ${fmtH.format(java.util.Date(it))} · ${s["rel_duracao"]}: ${mmss((it - rel.inicio) / 1000)} (1:45:00)") }
+        rel.fim?.let { sb.append(" · ${s["rel_fim"]}: ${fmtH.format(java.util.Date(it))} · ${s["rel_duracao"]}: ${mmss((it - rel.inicio) / 1000)} (${r.rot.total / 60}:${(r.rot.total % 60).toString().padStart(2, '0')}:00)") }
         sb.append("\n\n")
-        for (l in linhasRelatorio(sem)) {
+        for (l in linhasRelatorio(r)) {
             val real = l.realSeg
             sb.append("${l.hora}  ${l.titulo}: ")
             if (real == null) sb.append("— (${l.previstoSeg / 60} min)\n")

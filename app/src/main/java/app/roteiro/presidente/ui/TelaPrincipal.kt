@@ -31,7 +31,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
@@ -97,9 +100,9 @@ private fun Tela(vm: AppVM) {
 
     LaunchedEffect(Unit) { vm.mensagens.collect { snack.showSnackbar(it) } }
 
-    val sem = vm.semanaAtual()
-    val est = sem?.let { vm.estado(it.id) }
-    val rot = sem?.let { vm.roteiro(it) }
+    val reu = vm.reuniaoAtual()
+    val est = reu?.estado
+    val rot = reu?.rot
     val presidindo = vm.presidindo && rot != null
     val passos = rot?.passos.orEmpty()
     val pres = vm.presidir
@@ -145,9 +148,9 @@ private fun Tela(vm: AppVM) {
                 if (vm.presidindo) { vm.pararPresidir(); painel = "relatorio" } else { rolar = true; vm.iniciarPresidir(passos.size) }
             }, aoPainel = { painel = it })
         },
-        bottomBar = { if (presidindo && passo != null) BarraPresidir(vm, passos, passoIdx) { i -> rolar = true; vm.irPasso(i, passos.size) } },
+        bottomBar = { if (presidindo && passo != null) BarraPresidir(vm, passos, passoIdx, rot?.total ?: 105) { i -> rolar = true; vm.irPasso(i, passos.size) } },
     ) { pad ->
-        if (sem == null || rot == null || est == null) {
+        if (reu == null || rot == null || est == null) {
             Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(Textos.formatar(s["vazio"], "i" to Textos.NOME_IDIOMA[vm.cfg.lang]), color = c.suave, fontSize = 18.sp,
@@ -173,10 +176,15 @@ private fun Tela(vm: AppVM) {
         ) {
             item(key = "cab") {
                 Box(Modifier.widthIn(max = LARGURA_MAX.dp).fillMaxWidth()) {
-                    Cabecalho(vm, est.sc, est.salas, palco, aoImprimir = {
-                        Impressao.imprimir(ctx, s["app"] + " — " + sem.periodo,
-                            Impressao.html(sem, est, rot, if (est.sc) s["sc"] else s["normal"]))
-                    }, aoRelatorio = { painel = "relatorio" })
+                    Cabecalho(vm, reu, palco, aoImprimir = {
+                        Impressao.imprimir(ctx, s["app"] + " — " + reu.periodo,
+                            Impressao.html(reu.idioma, reu.sup, est, rot, reu.titulo))
+                    }, aoPainel = { painel = it })
+                }
+            }
+            if (!palco && reu.tipo != "meio") item(key = "form") {
+                Box(Modifier.widthIn(max = LARGURA_MAX.dp).fillMaxWidth()) {
+                    if (reu.tipo == "fds") FormFds(vm, reu, ed) { painel = "temasEscolher" } else FormCel(vm, reu, ed)
                 }
             }
             itemsIndexed(rot.itens, key = { i, it -> if (it is ItemRoteiro.BlocoR) it.b.id else "i$i" }) { _, item ->
@@ -188,7 +196,7 @@ private fun Tela(vm: AppVM) {
                             val b = item.b
                             val ehAtual = passo?.bloco == b.id
                             CartaoBloco(
-                                b, ed, sem.idioma,
+                                b, ed, reu.idioma,
                                 atual = ehAtual && passo?.cons == false,
                                 consAtual = ehAtual && passo?.cons == true,
                                 feito = b.id in feitos,
@@ -210,7 +218,11 @@ private fun Tela(vm: AppVM) {
         "licoes" -> PainelLicoes(vm) { painel = null }
         "config" -> PainelConfig(vm, aoCanticos = { painel = "canticos" }) { painel = null }
         "canticos" -> PainelCanticos(vm) { painel = "config" }
-        "relatorio" -> sem?.let { PainelRelatorio(vm, it) { painel = null } }
+        "relatorio" -> reu?.let { PainelRelatorio(vm, it) { painel = null } }
+        "agenda" -> PainelAgenda(vm) { painel = null }
+        "temas" -> PainelTemas(vm, escolher = null) { painel = null }
+        "temasEscolher" -> PainelTemas(vm, escolher = { n -> vm.valor(app.roteiro.presidente.nucleo.CamposFds.DISC, n.toString()) }) { painel = null }
+        "eventos" -> PainelEventos(vm) { painel = null }
     }
     // Começou atrasado ou por uma parte do meio: como contar o relógio da reunião?
     vm.pedidoRelogio?.let { ped ->
@@ -263,6 +275,8 @@ private fun Tela(vm: AppVM) {
 
 @Composable
 private fun SeletorSemana(vm: AppVM, modifier: Modifier = Modifier) {
+    if (vm.modo == "fds") { SeletorFds(vm, modifier); return }
+    if (vm.modo == "cel") { SeletorCel(vm, modifier); return }
     val s = vm.tx
     val sem = vm.semanaAtual()
     var menu by remember { mutableStateOf(false) }
@@ -319,14 +333,20 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
                         if (vm.presidindo) Icon(painterResource(R.drawable.ic_parar), null, Modifier.size(22.dp))
                         else Icon(Icons.Filled.PlayArrow, null, Modifier.size(24.dp))
                     }
-                    IconeTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(22.dp)) }
+                    when (vm.modo) {
+                        "fds" -> IconeTopo(s["agenda"], onClick = { aoPainel("agenda") }) { Icon(Icons.Filled.DateRange, null, Modifier.size(22.dp)) }
+                        "cel" -> IconeTopo(s["eventos"], onClick = { aoPainel("eventos") }) { Icon(Icons.Filled.Star, null, Modifier.size(22.dp)) }
+                        else -> IconeTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(22.dp)) }
+                    }
                     IconeTopo(s["config"], onClick = { aoPainel("config") }) { Icon(Icons.Filled.Settings, null, Modifier.size(22.dp)) }
                 }
+                if (!vm.presidindo) AbasModo(vm, Modifier.fillMaxWidth().padding(top = 4.dp))
                 SeletorSemana(vm, Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp))
             }
         } else {
+            Column(Modifier.fillMaxWidth().statusBarsPadding()) {
             FlowRow(
-                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -343,8 +363,14 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
                 if (vm.presidindo) BotaoTopo(s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
                     Icon(painterResource(R.drawable.ic_palco), null, Modifier.size(20.dp))
                 }
-                BotaoTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(20.dp)) }
+                when (vm.modo) {
+                    "fds" -> BotaoTopo(s["agenda"], onClick = { aoPainel("agenda") }) { Icon(Icons.Filled.DateRange, null, Modifier.size(20.dp)) }
+                    "cel" -> BotaoTopo(s["eventos"], onClick = { aoPainel("eventos") }) { Icon(Icons.Filled.Star, null, Modifier.size(20.dp)) }
+                    else -> BotaoTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(20.dp)) }
+                }
                 BotaoTopo(s["config"], onClick = { aoPainel("config") }) { Icon(Icons.Filled.Settings, null, Modifier.size(20.dp)) }
+            }
+            if (!vm.presidindo) AbasModo(vm, Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 6.dp).widthIn(max = 640.dp))
             }
         }
     }
@@ -379,46 +405,60 @@ private fun IconeTopo(descricao: String, ativo: Boolean = false, onClick: () -> 
 }
 
 @Composable
-private fun Cabecalho(vm: AppVM, sc: Boolean, salas: Boolean, palco: Boolean, aoImprimir: () -> Unit, aoRelatorio: () -> Unit) {
+private fun Cabecalho(vm: AppVM, reu: AppVM.Reuniao, palco: Boolean, aoImprimir: () -> Unit, aoPainel: (String) -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
-    val sem = vm.semanaAtual() ?: return
     val ctx = LocalContext.current
     val compacto = LocalCompacto.current
+    val est = reu.estado
     var lembretes by rememberSaveable { mutableStateOf(false) }
     Column(
         Modifier.fillMaxWidth().padding(bottom = 6.dp).background(c.cartao, RoundedCornerShape(14.dp))
             .padding(horizontal = if (compacto) 12.dp else 16.dp, vertical = if (compacto) 10.dp else 14.dp)
     ) {
-        Text("${s["meeting"]} · ${sem.leitura} · ${sem.periodo}".uppercase(), fontSize = 13.sp, color = c.suave,
-            fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
-        Text(if (sc) s["sc"] else s["normal"], fontSize = if (compacto) 20.sp else 24.sp, fontWeight = FontWeight.Bold, color = c.tinta,
+        Text(reu.sup.uppercase(), fontSize = 13.sp, color = c.suave, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
+        Text(reu.titulo, fontSize = if (compacto) 20.sp else 24.sp, fontWeight = FontWeight.Bold, color = c.tinta,
             modifier = Modifier.padding(top = 2.dp, bottom = if (palco) 0.dp else 10.dp))
         if (palco) return@Column   // no modo palco, só o título
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = sc, onClick = { vm.setSC(!sc) }, label = { Text(s["visitaSC"]) },
+            if (reu.tipo != "cel") FilterChip(selected = est.sc, onClick = { vm.setSC(!est.sc) }, label = { Text(s["visitaSC"]) },
                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.scFundo, selectedLabelColor = c.sc))
-            FilterChip(selected = salas && !sc, enabled = !sc, onClick = { vm.setSalas(!salas) }, label = { Text(s["salas"]) },
+            if (reu.tipo == "meio") FilterChip(selected = est.salas && !est.sc, enabled = !est.sc, onClick = { vm.setSalas(!est.salas) }, label = { Text(s["salas"]) },
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.salaFundo, selectedLabelColor = c.sala))
+            val esp = est.marcado(app.roteiro.presidente.nucleo.CamposFds.ESPECIAL)
+            if (reu.tipo == "fds") FilterChip(selected = esp && !est.sc, enabled = !est.sc,
+                onClick = { vm.marcar(app.roteiro.presidente.nucleo.CamposFds.ESPECIAL, !esp) }, label = { Text(s["fds_especial"]) },
                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.salaFundo, selectedLabelColor = c.sala))
             AssistChip(onClick = {
-                val m = Roteiro.minDe(vm.cfg.inicio)
-                TimePickerDialog(ctx, { _, h, mi -> vm.mudarCfg { it.copy(inicio = "%02d:%02d".format(h, mi)) } }, m / 60, m % 60, true).show()
-            }, label = { Text("${s["inicio"]}  ${vm.cfg.inicio}") })
+                val m = Roteiro.minDe(vm.inicioAtual())
+                TimePickerDialog(ctx, { _, h, mi -> vm.definirInicio("%02d:%02d".format(h, mi)) }, m / 60, m % 60, true).show()
+            }, label = { Text("${s["inicio"]}  ${vm.inicioAtual()}") })
             AssistChip(onClick = aoImprimir, label = { Text(s["imprimir"]) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_imprimir), null, Modifier.size(18.dp)) })
-            if (vm.relatorio(sem.id) != null) AssistChip(onClick = aoRelatorio, label = { Text(s["relatorio"]) },
+            if (vm.relatorio(reu.id) != null) AssistChip(onClick = { aoPainel("relatorio") }, label = { Text(s["relatorio"]) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_relogio), null, Modifier.size(18.dp)) })
+            if (reu.tipo == "fds") {
+                AssistChip(onClick = { aoPainel("agenda") }, label = { Text(s["agenda"]) },
+                    leadingIcon = { Icon(Icons.Filled.DateRange, null, Modifier.size(18.dp)) })
+                AssistChip(onClick = { aoPainel("temas") }, label = { Text(s["temas"]) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null, Modifier.size(18.dp)) })
+            }
+            if (reu.tipo != "meio") AssistChip(onClick = { aoPainel("eventos") }, label = { Text(s["eventos"]) },
+                leadingIcon = { Icon(Icons.Filled.Star, null, Modifier.size(18.dp)) })
         }
-        Text((if (lembretes) "▾ " else "▸ ") + s["lembretes_t"], fontWeight = FontWeight.SemiBold, color = c.tinta,
-            modifier = Modifier.clickable { lembretes = !lembretes }.padding(top = 10.dp, bottom = 4.dp))
-        if (lembretes) s.lista("lembretes").forEach {
-            Text("•  $it", color = c.suave, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp, bottom = 3.dp))
+        val chaveLemb = if (reu.tipo == "meio") "lembretes" else "lembretes_fds"
+        if (reu.tipo != "cel") {
+            Text((if (lembretes) "▾ " else "▸ ") + s["lembretes_t"], fontWeight = FontWeight.SemiBold, color = c.tinta,
+                modifier = Modifier.clickable { lembretes = !lembretes }.padding(top = 10.dp, bottom = 4.dp))
+            if (lembretes) s.lista(chaveLemb).forEach {
+                Text("•  $it", color = c.suave, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp, bottom = 3.dp))
+            }
         }
     }
 }
 
 @Composable
-private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.Passo>, idx: Int, aoMudarPasso: (Int) -> Unit) {
+private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.Passo>, idx: Int, totalMin: Int, aoMudarPasso: (Int) -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
     val compacto = LocalCompacto.current
@@ -442,10 +482,10 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
     val reuniao = vm.decorridoReuniao().coerceAtLeast(0.0)
     val rs = reuniao.toLong()
     val txtReuniao = "${rs / 3600}:" + ((rs / 60) % 60).toString().padStart(2, '0') + ":" + (rs % 60).toString().padStart(2, '0')
-    val faltam = Math.round(105 - reuniao / 60).toInt()
+    val faltam = Math.round(totalMin - reuniao / 60).toInt()
     val txtFaltam = if (faltam >= 0) Textos.formatar(s["faltam"], "n" to faltam) else "+${-faltam} min"
     // adiantado/atrasado: compara o tempo real da reunião com o previsto para este ponto do roteiro
-    val previstoMin = (p.ini - Roteiro.minDe(vm.cfg.inicio)) + minOf(dec, total) / 60.0
+    val previstoMin = (p.ini - Roteiro.minDe(vm.inicioAtual())) + minOf(dec, total) / 60.0
     val dif = Math.round(reuniao / 60 - previstoMin).toInt()
     val status = when {
         Math.abs(dif) < 1 -> s["noHorario"]

@@ -49,6 +49,7 @@ data class Bloco(
     val falaNoFim: Boolean = false,            // fala depois da lista (ex.: apresentar o SC após os anúncios)
     val termino: String? = null,
     val passos: List<Passo> = emptyList(),
+    val totalTxt: String = "1h45",
 )
 
 sealed interface ItemRoteiro {
@@ -57,7 +58,7 @@ sealed interface ItemRoteiro {
     data class BlocoR(val b: Bloco) : ItemRoteiro
 }
 
-data class RoteiroMontado(val itens: List<ItemRoteiro>, val passos: List<Passo>, val fim: String)
+data class RoteiroMontado(val itens: List<ItemRoteiro>, val passos: List<Passo>, val fim: String, val total: Int = 105)
 
 object Roteiro {
 
@@ -104,7 +105,7 @@ object Roteiro {
         return out
     }
 
-    private fun nomesDe(falas: List<List<Seg>>): List<Campo> =
+    internal fun nomesDe(falas: List<List<Seg>>): List<Campo> =
         falas.flatten().filterIsInstance<Seg.Nome>().map { Campo(it.k, it.rotulo) }.distinctBy { it.k }
 
     fun textoProxima(px: Proxima?, lang: String): String {

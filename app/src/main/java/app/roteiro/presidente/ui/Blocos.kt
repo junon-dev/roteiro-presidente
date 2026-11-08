@@ -200,7 +200,7 @@ fun CartaoBloco(
         if (b.falaNoFim) b.falas.forEach { Fala(it, ed.estado) }
         b.conselho?.let { CartaoConselho(it, ed, lang, consAtual, aoIniciar?.let { f -> { f(true) } }, parteEmCurso = atual) }
         b.termino?.let {
-            Text(buildAnnotatedString { append(s["termino"] + ": "); val i = length; append(it); addStyle(SpanStyle(fontWeight = FontWeight.Bold), i, length); append(" · 1h45") },
+            Text(buildAnnotatedString { append(s["termino"] + ": "); val i = length; append(it); addStyle(SpanStyle(fontWeight = FontWeight.Bold), i, length); append(" · " + b.totalTxt) },
                 color = c.suave, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }

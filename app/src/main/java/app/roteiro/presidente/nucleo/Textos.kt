@@ -434,7 +434,10 @@ object Textos {
         fun fmt(k: String, vararg pares: Pair<String, Any?>): String = formatar(get(k), *pares)
     }
 
-    private val idiomas = mapOf("pt" to Idioma(pt, ptListas, ptSecoes), "es" to Idioma(es, esListas, esSecoes))
+    private val idiomas = mapOf(
+        "pt" to Idioma(pt + TextosFds.pt, ptListas + TextosFds.ptListas, ptSecoes + TextosFds.ptSecoes),
+        "es" to Idioma(es + TextosFds.es, esListas + TextosFds.esListas, esSecoes + TextosFds.esSecoes),
+    )
     fun de(lang: String): Idioma = idiomas[lang] ?: idiomas.getValue("pt")
 
     val NOME_IDIOMA = mapOf("pt" to "português", "es" to "español")

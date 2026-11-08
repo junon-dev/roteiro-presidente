@@ -66,11 +66,55 @@ abstract class TelasBase(private val prefixo: String) {
         regra.setContent {
             TemaApp(vm.cfg.tema, vm.cfg.fonte) {
                 androidx.compose.runtime.CompositionLocalProvider(app.roteiro.presidente.ui.LocalCompacto provides (prefixo == "celular")) {
-                    PainelRelatorio(vm, vm.semanaAtual()!!) {}
+                    PainelRelatorio(vm, vm.reuniaoAtual()!!) {}
                 }
             }
         }
         fotoDialogo("5-relatorio")
+    }
+
+    /** Fim de semana: formulário, roteiro, agenda, temas e eventos; Celebração. */
+    @Test
+    fun fimDeSemana() {
+        val vm = AppVM(ApplicationProvider.getApplicationContext<Application>()).apply { relogioAutomatico = false }
+        val seg = vm.segundaDe(java.time.LocalDate.now())
+        val prox = java.time.LocalDate.parse(seg).plusWeeks(1).toString()
+        // agenda da próxima semana
+        vm.irParaFds(prox)
+        vm.valor("discurso", "5"); vm.valor("orador", "Marcos Lima"); vm.valor("cong", "Jabaquara")
+        // fim de semana atual
+        vm.irParaFds(seg)
+        vm.valor("discurso", "12"); vm.valor("orador", "João Silva"); vm.valor("cong", "Vila Mariana")
+        vm.valor("cantico", "21"); vm.valor("oracaoIni", "Pedro Souza"); vm.valor("dirigente", "Carlos Dias")
+        vm.valor("leitor", "André Reis"); vm.valor("canticoS", "76"); vm.valor("canticoF", "150")
+        val painel = androidx.compose.runtime.mutableStateOf<String?>(null)
+        regra.setContent {
+            TemaApp(vm.cfg.tema, vm.cfg.fonte) {
+                TelaPrincipal(vm)
+                androidx.compose.runtime.CompositionLocalProvider(app.roteiro.presidente.ui.LocalCompacto provides (prefixo == "celular")) {
+                    when (painel.value) {
+                        "agenda" -> app.roteiro.presidente.ui.PainelAgenda(vm) {}
+                        "temas" -> app.roteiro.presidente.ui.PainelTemas(vm, escolher = {}) {}
+                        "eventos" -> app.roteiro.presidente.ui.PainelEventos(vm) {}
+                    }
+                }
+            }
+        }
+        foto("7-fds")
+        regra.runOnIdle { vm.marcar("especial", true) }
+        foto("8-fds-especial")
+        regra.runOnIdle { vm.marcar("especial", false); painel.value = "agenda" }
+        foto("9-agenda")
+        regra.runOnIdle { painel.value = "temas" }
+        foto("10-temas")
+        regra.runOnIdle { painel.value = "eventos" }
+        foto("11-eventos")
+        regra.runOnIdle { painel.value = null; vm.mudarModo("cel"); vm.valor("orador", "Rui Alves") }
+        foto("12-celebracao")
+        regra.runOnIdle { vm.mudarModo("fds") }
+        val passos = vm.reuniaoAtual()!!.rot.passos
+        regra.runOnIdle { vm.iniciarPresidir(passos.size); vm.responderRelogio(null); vm.irPasso(1, passos.size); vm.responderRelogio(null) }
+        foto("13-fds-presidir")
     }
 
     @Test

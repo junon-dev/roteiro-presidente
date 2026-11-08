@@ -72,7 +72,8 @@ fun TemaApp(tema: String, fonte: Int = 2, conteudo: @Composable () -> Unit) {
 }
 
 fun corSecao(c: Cores, sec: String?): Color = when (sec) {
-    "tesouros" -> c.tesouros; "ministerio" -> c.ministerio; "vida" -> c.vida; else -> c.linha
+    "tesouros" -> c.tesouros; "ministerio" -> c.ministerio; "vida" -> c.vida
+    "publica" -> c.tesouros; "sentinela" -> c.falaBorda; "celebracao" -> c.vida; else -> c.linha
 }
 
 /** Converte texto com <b>…</b> e <i>…</i> em texto formatado. */

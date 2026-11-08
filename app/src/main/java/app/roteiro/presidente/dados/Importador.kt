@@ -20,6 +20,7 @@ import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 import app.roteiro.presidente.nucleo.Biblia
+import app.roteiro.presidente.nucleo.LeitorEventos
 
 /** Resultado da leitura de um arquivo escolhido pelo usuário. */
 sealed interface Importado {
@@ -27,6 +28,8 @@ sealed interface Importado {
     data class Brochura(val b: BrochuraLida) : Importado
     data class Cancioneiro(val idioma: String, val titulos: Map<String, String>, val textos: Map<String, String> = emptyMap()) : Importado
     data class CancioneiroErrado(val titulo: String, val simbolo: String) : Importado
+    data class Evento(val ev: app.roteiro.presidente.nucleo.EventoEspecial) : Importado
+    data class Discursos(val l: app.roteiro.presidente.nucleo.ListaDiscursos) : Importado
     data class Falha(val motivo: String) : Importado
 }
 
@@ -49,7 +52,11 @@ class Importador(private val ctx: Context) {
         return try {
             when {
                 bytes.size > 4 && bytes[0] == '%'.code.toByte() && bytes[1] == 'P'.code.toByte() -> lerPdf(bytes, nome)
-                bytes.size > 4 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte() -> lerJwpub(bytes, nome)
+                bytes.size > 4 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte() -> {
+                    val docx = LeitorEventos.textoDocx(bytes)
+                    if (docx != null) lerTexto(docx, nome) ?: Importado.Falha("documento não reconhecido (esperado S-99, S-125 ou S-126)")
+                    else lerJwpub(bytes, nome)
+                }
                 else -> Importado.Falha("formato não reconhecido")
             }
         } catch (e: Throwable) {
@@ -82,10 +89,24 @@ class Importador(private val ctx: Context) {
 
     private fun lerPdf(bytes: ByteArray, nome: String): Importado {
         if (!pdfboxPronto) { PDFBoxResourceLoader.init(ctx.applicationContext); pdfboxPronto = true }
-        val pags = PDDocument.load(ByteArrayInputStream(bytes)).use { paginas(it) }
+        val pags = PDDocument.load(ByteArrayInputStream(bytes)).use { doc ->
+            // orientações curtas (S-99, S-125, S-126): basta o texto corrido
+            if (doc.numberOfPages <= 12) {
+                val texto = PDFTextStripper().getText(doc)
+                lerTexto(texto, nome)?.let { return it }
+            }
+            paginas(doc)
+        }
         LeitorBrochura.analisar(pags)?.let { return Importado.Brochura(it) }
         val r = LeitorApostila.analisar(pags, nome)
         return if (r.semanas.isEmpty()) Importado.Falha("nenhuma semana encontrada") else Importado.Apostila(r)
+    }
+
+    /** Reconhece a lista de discursos (S-99) e as orientações de eventos (S-125, S-126). */
+    private fun lerTexto(texto: String, nome: String): Importado? {
+        LeitorEventos.lerEvento(texto, nome.substringBeforeLast('.'))?.let { return Importado.Evento(it) }
+        LeitorEventos.lerDiscursos(texto)?.let { return Importado.Discursos(it) }
+        return null
     }
 
     /* ---------- .jwpub (só o índice: números e títulos, que ficam abertos no arquivo) ---------- */

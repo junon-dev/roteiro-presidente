@@ -53,14 +53,15 @@ object Impressao {
     private fun marc(s: String) = esc(s).replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
         .replace("&lt;i&gt;", "<i>").replace("&lt;/i&gt;", "</i>")
 
-    fun html(sem: Semana, e: EstadoSemana, r: RoteiroMontado, tituloSemana: String): String {
-        val s = Textos.de(sem.idioma)
+    fun html(lang: String, sup: String, e: EstadoSemana, r: RoteiroMontado, tituloSemana: String): String {
+        val s = Textos.de(lang)
         val sb = StringBuilder()
         sb.append("""<!doctype html><html><head><meta charset="utf-8"><style>
             body{font-family:sans-serif;font-size:11pt;color:#1d2430;margin:0}
             h1{font-size:16pt;margin:0 0 4pt} .sup{font-size:9pt;color:#5b6472;text-transform:uppercase;letter-spacing:.05em}
             .sec{color:#fff;font-weight:bold;font-size:9pt;text-transform:uppercase;padding:3pt 8pt;margin:10pt 0 4pt;border-radius:3pt}
             .tesouros{background:#2f6f7a}.ministerio{background:#a8740f}.vida{background:#a33a2a}
+            .publica{background:#2f6f7a}.sentinela{background:#3b6fb6}.celebracao{background:#a33a2a}
             .b{display:flex;gap:8pt;border-bottom:1px solid #ddd;padding:5pt 0;page-break-inside:avoid}
             .h{width:38pt;font-weight:bold} .c{flex:1} .t{font-weight:bold}
             .f{background:#eef4fb;border-left:3px solid #3b6fb6;padding:3pt 6pt;margin:3pt 0}
@@ -69,7 +70,7 @@ object Impressao {
             .dica{font-size:9.5pt;color:#5b6472;font-style:italic;margin:2pt 0 2pt 46pt}
             ul{margin:2pt 0;padding-left:14pt}
             </style></head><body>""")
-        sb.append("<div class='sup'>${esc(s["meeting"])} · ${esc(sem.leitura)}</div><h1>${esc(tituloSemana)}</h1>")
+        sb.append("<div class='sup'>${esc(sup)}</div><h1>${esc(tituloSemana)}</h1>")
         fun nome(k: String, rot: String): String {
             val v = e.valor(k)
             return if (v.isNotBlank()) "<span class='n'>${esc(v)}</span>" else "<span class='n'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>"
@@ -101,6 +102,23 @@ object Impressao {
             is ItemRoteiro.BlocoR -> bloco(it.b)
         }
         sb.append("</body></html>")
+        return sb.toString()
+    }
+
+    /** Agenda de oradores em tabela. linhas: data, nº, tema, orador, congregação. */
+    fun htmlAgenda(titulo: String, cab: List<String>, linhas: List<List<String>>): String {
+        val sb = StringBuilder()
+        sb.append("""<!doctype html><html><head><meta charset="utf-8"><style>
+            body{font-family:sans-serif;font-size:10.5pt;color:#1d2430}
+            h1{font-size:15pt;margin:0 0 8pt} table{border-collapse:collapse;width:100%}
+            th{background:#1f3b4d;color:#fff;text-align:left;padding:4pt 6pt;font-size:9.5pt}
+            td{border-bottom:1px solid #ccc;padding:4pt 6pt;vertical-align:top} tr{page-break-inside:avoid}
+            </style></head><body>""")
+        sb.append("<h1>${esc(titulo)}</h1><table><tr>")
+        cab.forEach { sb.append("<th>${esc(it)}</th>") }
+        sb.append("</tr>")
+        linhas.forEach { l -> sb.append("<tr>"); l.forEach { sb.append("<td>${esc(it)}</td>") }; sb.append("</tr>") }
+        sb.append("</table></body></html>")
         return sb.toString()
     }
 

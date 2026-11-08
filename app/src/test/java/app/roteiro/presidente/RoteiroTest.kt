@@ -73,6 +73,31 @@ class RoteiroTest {
     }
 
     @Test
+    fun fimDeSemanaECelebracao() {
+        val ev = json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(),
+            app.roteiro.presidente.nucleo.EventoEspecial.serializer())), File("src/main/assets/eventos.json").readText())
+        val disc = json.decodeFromString(MapSerializer(String.serializer(), MapSerializer(String.serializer(), String.serializer())),
+            File("src/main/assets/discursos.json").readText())
+        assertEquals(194, disc["pt"]?.size)
+        for (lang in listOf("pt", "es")) {
+            val esp = ev["especial"]!![lang]!!
+            val cel = ev["celebracao"]!![lang]!!
+            assertEquals(146, esp.cantico); assertEquals(25, cel.cantico); assertEquals(18, cel.canticoFinal)
+            assertTrue(esp.anuncio.contains("[") && cel.anuncio.contains("["))
+            for (sc in listOf(false, true)) for (especial in listOf(false, true)) {
+                val e = EstadoSemana(sc = sc, v = if (especial) mapOf("especial" to "true") else emptyMap())
+                val r = app.roteiro.presidente.nucleo.RoteiroFds.montar(lang, e, "09:00", esp, null)
+                assertEquals("$lang sc=$sc esp=$especial", 105, r.passos.sumOf { it.dur })
+                assertEquals("10:45", r.fim)
+            }
+            val c = app.roteiro.presidente.nucleo.RoteiroFds.montarCelebracao(lang, EstadoSemana(), "19:30", cel)
+            assertEquals(58, c.passos.sumOf { it.dur })
+            val anuncio = c.itens.filterIsInstance<ItemRoteiro.BlocoR>().first { it.b.id == "anuncio" }.b
+            assertTrue(anuncio.campos.any { it.k == "anuncio.0" })
+        }
+    }
+
+    @Test
     fun conselhosTemPontosDaLicao() {
         for (sem in semanas) {
             val r = Roteiro.montar(sem, EstadoSemana(), Config(), licoes, null)
