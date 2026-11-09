@@ -59,6 +59,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.roteiro.presidente.AppVM
 import app.roteiro.presidente.BuildConfig
+import app.roteiro.presidente.Produto
 import app.roteiro.presidente.nucleo.Textos
 import java.time.LocalDate
 
@@ -165,29 +166,29 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
     Painel(s["config"], aoFechar) {
         Secao(s["geral"])
         Linha(s["idioma"], largo = true) { Opcoes(listOf("pt" to "Português", "es" to "Español"), vm.cfg.lang) { vm.mudarIdioma(it) } }
-        Linha(s["horaIni"]) {
+        if (Produto.temMeio) Linha(s["horaIni"]) {
             TextButton(onClick = {
                 val m = app.roteiro.presidente.nucleo.Roteiro.minDe(vm.cfg.inicio)
                 android.app.TimePickerDialog(ctx, { _, h, mi -> vm.mudarCfg { it.copy(inicio = "%02d:%02d".format(h, mi)) } }, m / 60, m % 60, true).show()
             }) { Text(vm.cfg.inicio, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         }
-        Linha(s["abertura"]) { Contador(vm.cfg.abertura, 1, 10) { v -> vm.mudarCfg { it.copy(abertura = v) } } }
+        if (Produto.temMeio) Linha(s["abertura"]) { Contador(vm.cfg.abertura, 1, 10) { v -> vm.mudarCfg { it.copy(abertura = v) } } }
         Linha(s["f_congregacao"], largo = true) {
             var nomeCong by remember { mutableStateOf(vm.cfg.congregacao) }
             OutlinedTextField(nomeCong, { v -> nomeCong = v; vm.mudarCfg { it.copy(congregacao = v.trim()) } }, singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Words),
                 modifier = Modifier.widthIn(min = 220.dp, max = 360.dp))
         }
-        Linha(s["horaIniFds"]) {
+        if (Produto.temFds) Linha(s["horaIniFds"]) {
             TextButton(onClick = {
                 val m = app.roteiro.presidente.nucleo.Roteiro.minDe(vm.cfg.inicioFds)
                 android.app.TimePickerDialog(ctx, { _, h, mi -> vm.mudarCfg { it.copy(inicioFds = "%02d:%02d".format(h, mi)) } }, m / 60, m % 60, true).show()
             }) { Text(vm.cfg.inicioFds, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         }
-        Linha(s["diaFds"], largo = true) {
+        if (Produto.temFds) Linha(s["diaFds"], largo = true) {
             Opcoes(listOf("6" to s["sabado"], "7" to s["domingo"]), vm.cfg.diaFds.toString()) { d -> vm.mudarCfg { it.copy(diaFds = d.toInt()) } }
         }
-        Linha(s["canticoMeio"]) { Contador(vm.cfg.meio, 1, 10) { v -> vm.mudarCfg { it.copy(meio = v) } } }
+        if (Produto.temMeio) Linha(s["canticoMeio"]) { Contador(vm.cfg.meio, 1, 10) { v -> vm.mudarCfg { it.copy(meio = v) } } }
         Linha(s["som"]) { Switch(vm.cfg.som, { on -> vm.mudarCfg { it.copy(som = on) } }) }
         Linha(s["vibrar"]) { Switch(vm.cfg.vibrar, { on -> vm.mudarCfg { it.copy(vibrar = on) } }) }
         Linha(s["tela"]) { Switch(vm.cfg.tela, { on -> vm.mudarCfg { it.copy(tela = on) } }) }
@@ -213,6 +214,7 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
         Button(onClick = { abrirArquivos.launch(arrayOf("application/pdf", "application/octet-stream", "application/zip", "*/*")) },
             modifier = Modifier.padding(vertical = 10.dp)) { Text(s["arq_importar"]) }
 
+        if (Produto.temMeio) {
         Text(s["arq_apostilas"], fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 8.dp))
         val grupos = vm.todasSemanas().groupBy { it.idioma to it.origem.ifBlank { "—" } }
         if (grupos.isEmpty()) Text(s["nenhumArquivo"], color = c.suave)
@@ -239,7 +241,9 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
                 } else Text(s["br_nenhuma"], color = c.suave)
             }
         }
+        }
 
+        if (Produto.temFds) {
         Text(s["te_t"] + " (S-99)", fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 14.dp))
         Text(listOf("pt", "es").joinToString(" · ") { "${Textos.NOME_IDIOMA[it]}: ${vm.discursos(it).size}" }, color = c.suave,
             modifier = Modifier.padding(vertical = 4.dp))
@@ -249,6 +253,7 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
             val cel = vm.evento("celebracao", lang)
             Text("${Textos.NOME_IDIOMA[lang]}: ${s["ev_esp"]} ${esp?.ano ?: ""} “${esp?.tema ?: "—"}” · ${s["ev_cel"]} “${cel?.tema ?: "—"}”",
                 color = c.suave, fontSize = 14.sp, modifier = Modifier.padding(vertical = 2.dp))
+        }
         }
 
         Text(s["canticos"], fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.padding(top = 14.dp))

@@ -56,8 +56,11 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         private set
     var semanaId by mutableStateOf<String?>(null)
     /** Qual reunião está na tela: "meio" (meio de semana), "fds" (fim de semana) ou "cel" (Celebração). */
-    var modo by mutableStateOf(if (LocalDate.now().dayOfWeek.value >= 6) "fds" else "meio")
+    var modo by mutableStateOf((if (LocalDate.now().dayOfWeek.value >= 6) "fds" else "meio").let { if (it in Produto.modos) it else Produto.modos.first() })
         private set
+    /** Nome e subtítulo mostrados no topo (cada app tem o seu). */
+    val nomeApp: String get() = when (Produto.id) { "guia" -> tx["app_guia"]; "completo" -> tx["app_completo"]; else -> tx["app"] }
+    val subApp: String get() = when (Produto.id) { "guia" -> tx["appsub_guia"]; "meio" -> tx["appsub_meio"]; else -> tx["appsub"] }
     /** Fim de semana escolhido: a segunda-feira (AAAA-MM-DD) da semana. */
     var fdsSemana by mutableStateOf(segundaDe(LocalDate.now()))
         private set
@@ -83,12 +86,12 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         dados.presidir?.let { pr ->
             val recente = pr.ativo && System.currentTimeMillis() - pr.inicioPasso < 3 * 3600_000L
             val partes = pr.sem.split(":")
-            if (recente && partes.size == 3 && partes[0] in listOf("fds", "cel")) {
+            if (recente && partes.size == 3 && partes[0] in listOf("fds", "cel") && partes[0] in Produto.modos) {
                 if (partes[1] != cfg.lang) dados = dados.copy(cfg = cfg.copy(lang = partes[1]))
                 if (partes[0] == "fds") { modo = "fds"; fdsSemana = partes[2] } else { modo = "cel"; celAno = partes[2].toIntOrNull() ?: celAno }
             } else {
                 val sem = todasSemanas().firstOrNull { it.id == pr.sem }
-                if (recente && sem != null) {
+                if (recente && sem != null && Produto.temMeio) {
                     if (sem.idioma != cfg.lang) dados = dados.copy(cfg = cfg.copy(lang = sem.idioma))
                     semanaId = sem.id
                     modo = "meio"
@@ -201,7 +204,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     }
 
     fun mudarModo(m: String) {
-        if (m == modo) return
+        if (m == modo || m !in Produto.modos) return
         if (presidindo) pararPresidir()
         modo = m
     }

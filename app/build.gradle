@@ -18,8 +18,32 @@ android {
         applicationId 'app.roteiro.presidente'
         minSdk 26
         targetSdk 35
-        versionCode 15
-        versionName '3.4'
+        versionCode 16
+        versionName '4.0'
+    }
+
+    // Três apps a partir do mesmo código:
+    //  meio     → Roteiro do Presidente (só meio de semana) — mesmo pacote de antes, atualiza sem perder dados
+    //  guia     → Guia do Presidente (fim de semana, agenda, histórico, SC, discurso especial, Celebração)
+    //  completo → tudo junto, com o fim de semana simplificado
+    flavorDimensions 'produto'
+    productFlavors {
+        meio {
+            dimension 'produto'
+            applicationId 'app.roteiro.presidente'
+            buildConfigField 'String', 'PRODUTO', '"meio"'
+        }
+        guia {
+            dimension 'produto'
+            applicationId 'app.roteiro.presidente.guia'
+            versionName '1.0' // guia
+            buildConfigField 'String', 'PRODUTO', '"guia"'
+        }
+        completo {
+            dimension 'produto'
+            applicationId 'app.roteiro.presidente.completo'
+            buildConfigField 'String', 'PRODUTO', '"completo"'
+        }
     }
 
     signingConfigs {

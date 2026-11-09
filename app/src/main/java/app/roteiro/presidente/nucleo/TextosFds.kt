@@ -4,6 +4,10 @@ package app.roteiro.presidente.nucleo
 object TextosFds {
     val pt: Map<String, String> = mapOf(
         "appsub" to "Presidência das reuniões",
+        "appsub_meio" to "Reunião Vida e Ministério",
+        "app_guia" to "Guia do Presidente",
+        "appsub_guia" to "Fim de semana e eventos especiais",
+        "app_completo" to "Roteiro do Presidente",
         "cant_ora_fala" to "Vamos começar com o cântico {n}. Depois, o irmão {f} fará a oração.",
         "intro_t" to "Introdução",
         "intro_av_t" to "Introdução e anúncios",
@@ -78,7 +82,7 @@ object TextosFds {
         "fds_prox" to "Na próxima semana, o discurso público será “{tema}”, feito pelo irmão {orador}, da congregação {cong}.",
         "fds_prox_esp" to "Na próxima semana teremos o discurso especial “{tema}”.",
         "fds_prox_sc" to "Na próxima semana teremos a visita do superintendente de circuito.",
-        "fds_prox_vazio" to "A agenda da próxima semana ainda está vazia. Preencha em Agenda para anunciar o próximo discurso.",
+        "fds_prox_vazio" to "O próximo fim de semana ainda não foi preenchido. Preencha-o para que o próximo discurso seja anunciado aqui.",
         "fds_sent_fala" to "Agora, o irmão {dir} vai dirigir o Estudo de A Sentinela.",
         "fds_cant_instr" to "O dirigente do Estudo de A Sentinela ({dir}) anuncia este cântico.",
         "fds_ora_instr" to "Oração final: {f}",
@@ -156,6 +160,10 @@ object TextosFds {
 
     val es: Map<String, String> = mapOf(
         "appsub" to "Presidencia de las reuniones",
+        "appsub_meio" to "Reunión Vida y Ministerio",
+        "app_guia" to "Guía del presidente",
+        "appsub_guia" to "Fin de semana y eventos especiales",
+        "app_completo" to "Guion del presidente",
         "cant_ora_fala" to "Empecemos con la canción {n}. Después, el hermano {f} hará la oración.",
         "intro_t" to "Introducción",
         "intro_av_t" to "Introducción y anuncios",
@@ -228,7 +236,7 @@ object TextosFds {
         "fds_prox" to "La próxima semana, el discurso público será «{tema}», a cargo del hermano {orador}, de la congregación {cong}.",
         "fds_prox_esp" to "La próxima semana tendremos el discurso especial «{tema}».",
         "fds_prox_sc" to "La próxima semana tendremos la visita del superintendente de circuito.",
-        "fds_prox_vazio" to "La agenda de la próxima semana todavía está vacía. Complétela en Agenda para anunciar el próximo discurso.",
+        "fds_prox_vazio" to "El próximo fin de semana todavía no se ha completado. Complételo para que el próximo discurso se anuncie aquí.",
         "fds_sent_fala" to "Ahora, el hermano {dir} conducirá el Estudio de La Atalaya.",
         "fds_cant_instr" to "El conductor del Estudio de La Atalaya ({dir}) anuncia esta canción.",
         "fds_ora_instr" to "Oración final: {f}",

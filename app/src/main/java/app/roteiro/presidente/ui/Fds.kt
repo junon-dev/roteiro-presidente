@@ -71,10 +71,11 @@ import java.time.LocalDate
 /* ---------- abas: meio de semana / fim de semana / Celebração ---------- */
 @Composable
 fun AbasModo(vm: AppVM, modifier: Modifier = Modifier) {
+    if (app.roteiro.presidente.Produto.modos.size < 2) return
     val c = LocalCores.current
     val s = vm.tx
     Row(modifier.background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(10.dp)).padding(3.dp)) {
-        for ((m, rot) in listOf("meio" to s["aba_meio"], "fds" to s["aba_fds"], "cel" to s["aba_cel"])) {
+        for ((m, rot) in listOf("meio" to s["aba_meio"], "fds" to s["aba_fds"], "cel" to s["aba_cel"]).filter { it.first in app.roteiro.presidente.Produto.modos }) {
             val on = vm.modo == m
             Box(
                 Modifier.weight(1f).background(if (on) Color.White else Color.Transparent, RoundedCornerShape(8.dp))
@@ -210,10 +211,12 @@ fun FormFds(vm: AppVM, reu: AppVM.Reuniao, ed: Edicao, aoTemas: () -> Unit) {
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = aoTemas, modifier = Modifier.padding(top = 6.dp)) { Icon(Icons.AutoMirrored.Filled.List, s["temas"]) }
+                    if (app.roteiro.presidente.Produto.agenda)
+                        IconButton(onClick = aoTemas, modifier = Modifier.padding(top = 6.dp)) { Icon(Icons.AutoMirrored.Filled.List, s["temas"]) }
                 }
                 val n = e.valor(CamposFds.DISC).trim().toIntOrNull()
-                val aviso = vm.avisoDiscurso(lang, vm.fdsSemana, n)
+                val aviso = if (app.roteiro.presidente.Produto.agenda) vm.avisoDiscurso(lang, vm.fdsSemana, n)
+                            else n?.let { vm.tituloDiscurso(lang, it) }?.takeIf { vm.naoUse(it) }?.let { s["nao_use"] }
                 if (aviso != null) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                     Icon(Icons.Filled.Warning, null, tint = c.alerta, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -531,7 +534,7 @@ fun PainelModelos(vm: AppVM, aoFechar: () -> Unit) {
         Text(s["mod_info"], color = c.suave, fontSize = 15.sp)
         Text(s["intro_ajuda"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
         Row(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for ((t, rot) in listOf("meio" to s["aba_meio"], "fds" to s["aba_fds"], "cel" to s["aba_cel"]))
+            if (app.roteiro.presidente.Produto.modos.size > 1) for ((t, rot) in listOf("meio" to s["aba_meio"], "fds" to s["aba_fds"], "cel" to s["aba_cel"]).filter { it.first in app.roteiro.presidente.Produto.modos })
                 FilterChip(selected = tipo == t, onClick = { tipo = t }, label = { Text(rot) })
         }
         val mods = vm.modelos(lang, tipo)

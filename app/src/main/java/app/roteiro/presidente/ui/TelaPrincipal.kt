@@ -177,7 +177,7 @@ private fun Tela(vm: AppVM) {
             item(key = "cab") {
                 Box(Modifier.widthIn(max = LARGURA_MAX.dp).fillMaxWidth()) {
                     Cabecalho(vm, reu, palco, aoImprimir = {
-                        Impressao.imprimir(ctx, s["app"] + " — " + reu.periodo,
+                        Impressao.imprimir(ctx, vm.nomeApp + " — " + reu.periodo,
                             Impressao.html(reu.idioma, reu.sup, est, rot, reu.titulo))
                     }, aoPainel = { painel = it })
                 }
@@ -329,7 +329,7 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
             // Celular: título e ícones numa linha, semana na linha de baixo
             Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(s["app"], fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Color.White, maxLines = 1,
+                    Text(vm.nomeApp, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Color.White, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
                     SeletorIdioma(vm, true)
                     if (vm.presidindo) IconeTopo(s["palco"], ativo = vm.palco, onClick = { vm.palco = !vm.palco }) {
@@ -340,7 +340,8 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
                         else Icon(Icons.Filled.PlayArrow, null, Modifier.size(24.dp))
                     }
                     when (vm.modo) {
-                        "fds" -> IconeTopo(s["agenda"], onClick = { aoPainel("agenda") }) { Icon(Icons.Filled.DateRange, null, Modifier.size(22.dp)) }
+                        "fds" -> if (app.roteiro.presidente.Produto.agenda) IconeTopo(s["agenda"], onClick = { aoPainel("agenda") }) { Icon(Icons.Filled.DateRange, null, Modifier.size(22.dp)) }
+                                 else IconeTopo(s["eventos"], onClick = { aoPainel("eventos") }) { Icon(Icons.Filled.Star, null, Modifier.size(22.dp)) }
                         "cel" -> IconeTopo(s["eventos"], onClick = { aoPainel("eventos") }) { Icon(Icons.Filled.Star, null, Modifier.size(22.dp)) }
                         else -> IconeTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(22.dp)) }
                     }
@@ -357,8 +358,8 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
                 verticalArrangement = Arrangement.Center,
             ) {
                 Column(Modifier.align(Alignment.CenterVertically).padding(end = 8.dp)) {
-                    Text(s["app"], fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
-                    Text(s["appsub"], fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f))
+                    Text(vm.nomeApp, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                    Text(vm.subApp, fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f))
                 }
                 SeletorSemana(vm, Modifier.align(Alignment.CenterVertically))
                 Box(Modifier.align(Alignment.CenterVertically)) { SeletorIdioma(vm, false) }
@@ -370,7 +371,8 @@ private fun BarraTopo(vm: AppVM, aoPresidir: () -> Unit, aoPainel: (String) -> U
                     Icon(painterResource(R.drawable.ic_palco), null, Modifier.size(20.dp))
                 }
                 when (vm.modo) {
-                    "fds" -> BotaoTopo(s["agenda"], onClick = { aoPainel("agenda") }) { Icon(Icons.Filled.DateRange, null, Modifier.size(20.dp)) }
+                    "fds" -> if (app.roteiro.presidente.Produto.agenda) BotaoTopo(s["agenda"], onClick = { aoPainel("agenda") }) { Icon(Icons.Filled.DateRange, null, Modifier.size(20.dp)) }
+                             else BotaoTopo(s["eventos"], onClick = { aoPainel("eventos") }) { Icon(Icons.Filled.Star, null, Modifier.size(20.dp)) }
                     "cel" -> BotaoTopo(s["eventos"], onClick = { aoPainel("eventos") }) { Icon(Icons.Filled.Star, null, Modifier.size(20.dp)) }
                     else -> BotaoTopo(s["licoes"], onClick = { aoPainel("licoes") }) { Icon(painterResource(R.drawable.ic_livro), null, Modifier.size(20.dp)) }
                 }
@@ -443,7 +445,7 @@ private fun Cabecalho(vm: AppVM, reu: AppVM.Reuniao, palco: Boolean, aoImprimir:
                 leadingIcon = { Icon(painterResource(R.drawable.ic_imprimir), null, Modifier.size(18.dp)) })
             if (vm.relatorio(reu.id) != null) AssistChip(onClick = { aoPainel("relatorio") }, label = { Text(s["relatorio"]) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_relogio), null, Modifier.size(18.dp)) })
-            if (reu.tipo == "fds") {
+            if (reu.tipo == "fds" && app.roteiro.presidente.Produto.agenda) {
                 AssistChip(onClick = { aoPainel("agenda") }, label = { Text(s["agenda"]) },
                     leadingIcon = { Icon(Icons.Filled.DateRange, null, Modifier.size(18.dp)) })
                 AssistChip(onClick = { aoPainel("temas") }, label = { Text(s["temas"]) },
