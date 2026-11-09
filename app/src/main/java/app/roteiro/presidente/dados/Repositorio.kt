@@ -67,6 +67,8 @@ data class Arquivo(
     val discursos: Map<String, Map<String, String>> = emptyMap(),
     /** idioma -> número do discurso -> datas (AAAA-MM-DD) registradas à mão */
     val historico: Map<String, Map<String, List<String>>> = emptyMap(),
+    /** idioma -> tipo de reunião ("meio", "fds", "cel") -> 3 modelos de introdução editados pelo presidente */
+    val modelos: Map<String, Map<String, List<String>>> = emptyMap(),
 )
 
 class Repositorio(private val ctx: Context) {

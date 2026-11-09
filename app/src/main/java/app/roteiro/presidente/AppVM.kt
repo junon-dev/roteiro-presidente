@@ -264,11 +264,15 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         lang, estado(idFds(lang, seg)), cfg.inicioFds, evento("especial", lang),
         resumoFds(lang, LocalDate.parse(seg).plusWeeks(1).toString()),
         tituloCantico = { n -> tituloCantico(lang, n) }, textoCantico = { n -> textoCantico(lang, n) },
+        intro = introTexto("fds", lang, estado(idFds(lang, seg)), cfg.inicioFds),
+        avisos = estado(idFds(lang, seg)).valor(CamposFds.AVISOS),
     )
     fun roteiroCel(lang: String, ano: Int): RoteiroMontado {
         val e = estado(idCel(lang, ano))
-        return RoteiroFds.montarCelebracao(lang, e, e.valor(CamposFds.HORA).ifBlank { "19:30" }, evento("celebracao", lang),
-            tituloCantico = { n -> tituloCantico(lang, n) }, textoCantico = { n -> textoCantico(lang, n) })
+        val ini = e.valor(CamposFds.HORA).ifBlank { "19:30" }
+        return RoteiroFds.montarCelebracao(lang, e, ini, evento("celebracao", lang),
+            tituloCantico = { n -> tituloCantico(lang, n) }, textoCantico = { n -> textoCantico(lang, n) },
+            intro = introTexto("cel", lang, e, ini), avisos = e.valor(CamposFds.AVISOS))
     }
 
     /** Semanas da agenda: da atual até 26 semanas à frente (e, se pedido, as 12 anteriores). */
@@ -375,7 +379,38 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         tituloCantico = { n -> tituloCantico(sem.idioma, n) },
         textoCantico = { n -> textoCantico(sem.idioma, n) },
         oficial = { pub, lang, n -> oficial(pub, lang, n) },
+        intro = introTexto("meio", sem.idioma, estado(sem.id), cfg.inicio),
     )
+
+    /* ---------- introdução (boas-vindas) e modelos ---------- */
+    fun modelos(lang: String, tipo: String): List<String> {
+        val padrao = app.roteiro.presidente.nucleo.ModelosIntro.padrao(lang, tipo)
+        val meus = dados.modelos[lang]?.get(tipo).orEmpty()
+        return padrao.indices.map { i -> meus.getOrNull(i)?.takeIf { it.isNotBlank() } ?: padrao[i] }
+    }
+    fun modeloEditado(lang: String, tipo: String, i: Int) = dados.modelos[lang]?.get(tipo)?.getOrNull(i)?.isNotBlank() == true
+    fun salvarModelo(lang: String, tipo: String, i: Int, texto: String) = mudar { a ->
+        val porLang = a.modelos[lang].orEmpty()
+        val l = (porLang[tipo].orEmpty() + List(3) { "" }).take(3).toMutableList()
+        val padrao = app.roteiro.presidente.nucleo.ModelosIntro.padrao(lang, tipo).getOrNull(i)
+        l[i] = if (texto.trim() == padrao) "" else texto.trim()
+        a.copy(modelos = a.modelos + (lang to (porLang + (tipo to l))))
+    }
+    /** Texto bruto da introdução desta reunião: o que o presidente escreveu, ou o modelo 1. */
+    fun introBruta(tipo: String, lang: String, e: EstadoSemana): String =
+        e.valor(CamposFds.INTRO).ifBlank { modelos(lang, tipo).firstOrNull().orEmpty() }
+    /** Introdução com os marcadores já trocados ([saudação], [tema], [orador]). */
+    fun introTexto(tipo: String, lang: String, e: EstadoSemana, inicio: String): String {
+        val tema = when (tipo) {
+            "cel" -> evento("celebracao", lang)?.tema.orEmpty()
+            "fds" -> if (e.marcado(CamposFds.ESPECIAL) && !e.sc) evento("especial", lang)?.tema.orEmpty()
+                     else if (e.sc) e.valor(CamposFds.SC_TEMA) else e.valor(CamposFds.TEMA)
+            else -> ""
+        }
+        val orador = if (tipo == "fds" && e.sc) e.valor(CamposFds.SC) else e.valor(CamposFds.ORADOR)
+        return app.roteiro.presidente.nucleo.ModelosIntro.preencher(introBruta(tipo, lang, e),
+            RoteiroFds.saudacao(inicio, Textos.de(lang)), tema, orador)
+    }
 
     /* ---------- importação de arquivos ---------- */
     fun importar(uris: List<Uri>) {

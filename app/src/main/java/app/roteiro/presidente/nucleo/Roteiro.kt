@@ -172,6 +172,7 @@ object Roteiro {
         tituloCantico: (Int) -> String? = { null },
         textoCantico: (Int) -> String? = { null },
         oficial: FonteOficial = FonteOficial { _, _, _ -> null },
+        intro: String? = null,
     ): RoteiroMontado {
         val lang = sem.idioma
         val s = Textos.de(lang)
@@ -224,7 +225,9 @@ object Roteiro {
         val (cIni, tIni) = cant(sem.canticoInicial)
         add(bloco("abertura", Textos.formatar(s["cantico_oracao"], "n" to (sem.canticoInicial ?: "?")),
             subtitulo = tIni,
-            falas = listOf(fala(s["abre_fala"], mapOf("meeting" to s["meeting"], "n" to cIni), mapOf("f" to Campo("oracaoIni", s["f_oracao"]))))),
+            falas = if (intro.isNullOrBlank())
+                listOf(fala(s["abre_fala"], mapOf("meeting" to s["meeting"], "n" to cIni), mapOf("f" to Campo("oracaoIni", s["f_oracao"]))))
+            else listOf(listOf(Seg.Txt(intro)), fala(s["cant_ora_fala"], mapOf("n" to cIni), mapOf("f" to Campo("oracaoIni", s["f_oracao"]))))),
             listOf(cfg.abertura.coerceAtLeast(1) to false))
         val t1 = partes.firstOrNull { it.n == 1 }?.titulo.orEmpty()
         val tv = if (vidaPrim != null) Textos.formatar(s["ci_tv"], "t" to vidaPrim.titulo.replace(RX_ASPAS_PONTAS, "")) else ""

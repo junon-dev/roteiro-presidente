@@ -187,6 +187,11 @@ private fun Tela(vm: AppVM) {
                     if (reu.tipo == "fds") FormFds(vm, reu, ed) { painel = "temasEscolher" } else FormCel(vm, reu, ed)
                 }
             }
+            if (!palco) item(key = "intro") {
+                Box(Modifier.widthIn(max = LARGURA_MAX.dp).fillMaxWidth()) {
+                    CartaoIntro(vm, reu, ed) { painel = "modelos" }
+                }
+            }
             itemsIndexed(rot.itens, key = { i, it -> if (it is ItemRoteiro.BlocoR) it.b.id else "i$i" }) { _, item ->
                 Box(Modifier.widthIn(max = LARGURA_MAX.dp).fillMaxWidth()) {
                     when (item) {
@@ -216,7 +221,8 @@ private fun Tela(vm: AppVM) {
 
     when (painel) {
         "licoes" -> PainelLicoes(vm) { painel = null }
-        "config" -> PainelConfig(vm, aoCanticos = { painel = "canticos" }) { painel = null }
+        "config" -> PainelConfig(vm, aoCanticos = { painel = "canticos" }, aoModelos = { painel = "modelos" }) { painel = null }
+        "modelos" -> PainelModelos(vm) { painel = null }
         "canticos" -> PainelCanticos(vm) { painel = "config" }
         "relatorio" -> reu?.let { PainelRelatorio(vm, it) { painel = null } }
         "agenda" -> PainelAgenda(vm) { painel = null }

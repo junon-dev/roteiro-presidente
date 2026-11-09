@@ -23,6 +23,8 @@ object CamposFds {
     const val ESPECIAL = "especial"
     const val DATA = "data"
     const val HORA = "hora"
+    const val INTRO = "intro"
+    const val AVISOS = "avisos"
 }
 
 /** Resumo de um fim de semana (agenda e anúncio da próxima semana). */
@@ -116,6 +118,8 @@ object RoteiroFds {
         proxima: ResumoFds?,
         tituloCantico: (Int) -> String? = { null },
         textoCantico: (Int) -> String? = { null },
+        intro: String? = null,
+        avisos: String? = null,
     ): RoteiroMontado {
         val s = Textos.de(lang)
         val q = if (lang == "es") "«" to "»" else "“" to "”"
@@ -140,8 +144,9 @@ object RoteiroFds {
         val nIni = ev?.cantico ?: num(CamposFds.CANT)
         val (tIni, nmIni, subIni) = cant(CamposFds.CANT, ev?.cantico)
         m.add(bloco("abertura", tituloCant("cantico_oracao", nIni), subtitulo = subIni, sec = "publica",
-            falas = listOf(Roteiro.fala(s["fds_abre_fala"], tIni + ("saud" to saudacao(inicio, s)),
-                nmIni + ("f" to nome(CamposFds.ORA_INI, s["f_oracaoIni"])))),
+            falas = if (intro.isNullOrBlank()) listOf(Roteiro.fala(s["fds_abre_fala"], tIni + ("saud" to saudacao(inicio, s)),
+                nmIni + ("f" to nome(CamposFds.ORA_INI, s["f_oracaoIni"]))))
+            else listOf(listOf(Seg.Txt(intro)), Roteiro.fala(s["cant_ora_fala"], tIni, nmIni + ("f" to nome(CamposFds.ORA_INI, s["f_oracaoIni"])))),
             instr = listOfNotNull(ev?.notas?.firstOrNull())), 5)
 
         // 2. Discurso público (do orador, do SC ou o discurso especial)
@@ -181,6 +186,7 @@ object RoteiroFds {
             else -> falasDepois.add(Roteiro.fala(s["fds_prox"], mapOf("tema" to proxima.tema.ifBlank { "________" },
                 "orador" to proxima.orador.ifBlank { "________" }, "cong" to proxima.cong.ifBlank { "________" })))
         }
+        avisos?.trim()?.takeIf { it.isNotEmpty() }?.let { falasDepois.add(listOf(Seg.Txt(it))) }
         falasDepois.add(Roteiro.fala(s["fds_sent_fala"], nomes = mapOf("dir" to nome(CamposFds.DIR, s["f_dir_s"]))))
         ev?.notas?.drop(1)?.lastOrNull()?.let { instrDepois.add(it) }
         m.add(bloco("depois", s["fds_depois_t"], sec = "publica", falas = falasDepois, instr = instrDepois), if (temAnuncio) 1 else 2)
@@ -220,6 +226,8 @@ object RoteiroFds {
         ev: EventoEspecial?,
         tituloCantico: (Int) -> String? = { null },
         textoCantico: (Int) -> String? = { null },
+        intro: String? = null,
+        avisos: String? = null,
     ): RoteiroMontado {
         val s = Textos.de(lang)
         val m = Montador(Roteiro.minDe(inicio), 58, "58 min")
@@ -231,15 +239,17 @@ object RoteiroFds {
         m.secao("celebracao", s["cel_meeting"])
         val (fIni, subIni) = cant(ev?.cantico)
         m.add(bloco("abertura", tituloCant("cantico_oracao", ev?.cantico), subtitulo = subIni, sec = "celebracao",
-            falas = listOf(Roteiro.fala(s["cel_abre_fala"], mapOf("n" to fIni, "saud" to saudacao(inicio, s)),
-                mapOf("f" to nome(CamposFds.ORA_INI, s["f_oracaoIni"])))),
+            falas = if (intro.isNullOrBlank()) listOf(Roteiro.fala(s["cel_abre_fala"], mapOf("n" to fIni, "saud" to saudacao(inicio, s)),
+                mapOf("f" to nome(CamposFds.ORA_INI, s["f_oracaoIni"]))))
+            else listOf(listOf(Seg.Txt(intro)), Roteiro.fala(s["cant_ora_fala"], mapOf("n" to fIni), mapOf("f" to nome(CamposFds.ORA_INI, s["f_oracaoIni"])))),
             instr = listOfNotNull(ev?.notas?.firstOrNull())), 5)
         m.add(bloco("discurso", s["cel_disc_t"], sec = "celebracao", subtitulo = tema.ifBlank { null },
             falas = listOf(Roteiro.fala(s["cel_apres"], mapOf("tema" to tema), mapOf("orador" to nome(CamposFds.ORADOR, s["f_orador_"]))))), 45)
         if (ev != null && ev.anuncio.isNotBlank()) {
             val segs = anuncio(ev.anuncio)
             m.add(bloco("anuncio", s["cel_anuncio_t"], sec = "celebracao", instr = listOf(s["esp_anuncio_instr"]),
-                falas = listOf(segs), campos = Roteiro.nomesDe(listOf(segs))).copy(falaNoFim = true), 3)
+                falas = listOf(segs) + listOfNotNull(avisos?.trim()?.takeIf { it.isNotEmpty() }?.let { listOf(Seg.Txt(it)) }),
+                campos = Roteiro.nomesDe(listOf(segs))).copy(falaNoFim = true), 3)
         }
         val (fFim, subFim) = cant(ev?.canticoFinal)
         m.add(bloco("fim", tituloCant("cantico_oracao", ev?.canticoFinal), subtitulo = subFim, sec = "celebracao",

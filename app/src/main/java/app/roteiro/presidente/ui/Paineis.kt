@@ -139,7 +139,7 @@ private fun Contador(valor: Int, min: Int, max: Int, aoMudar: (Int) -> Unit) {
 
 /* ---------- Configurações (inclui os arquivos) ---------- */
 @Composable
-fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
+fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, aoFechar: () -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
     val ctx = LocalContext.current
@@ -277,6 +277,10 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoFechar: () -> Unit) {
                 OutlinedButton(onClick = { vm.definirPastaBackup(null) }) { Text(s["bk_desligar"], color = c.erro) }
             }
         }
+
+        Secao(s["mod_t"])
+        Text(s["mod_info"], color = c.suave, fontSize = 15.sp)
+        OutlinedButton(onClick = aoModelos, modifier = Modifier.padding(top = 8.dp)) { Text(s["intro_editar"]) }
 
         Secao(s["sobre"])
         Text(s["sobre_txt"], color = c.suave, fontSize = 15.sp)

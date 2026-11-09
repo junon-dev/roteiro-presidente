@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -464,6 +465,91 @@ private fun EditorEvento(vm: AppVM, ev: EventoEspecial, nome: String, corrigido:
                     tema = tema.trim(), anuncio = anuncio.trim(), notas = notas.lines().map { it.trim() }.filter { it.isNotEmpty() }))
             }) { Text(s["salvar"]) }
             if (corrigido) OutlinedButton(onClick = { vm.restaurarEvento(ev.tipo, ev.idioma) }) { Text(s["ev_restaurar"], color = c.erro) }
+        }
+    }
+}
+
+/* ---------- introdução (boas-vindas) e anúncios ---------- */
+@Composable
+fun CartaoIntro(vm: AppVM, reu: AppVM.Reuniao, ed: Edicao, aoModelos: () -> Unit) {
+    val c = LocalCores.current
+    val s = vm.tx
+    val compacto = LocalCompacto.current
+    val e = reu.estado
+    val mods = vm.modelos(reu.idioma, reu.tipo)
+    val bruta = vm.introBruta(reu.tipo, reu.idioma, e)
+    var aberto by rememberSaveable(reu.id) { mutableStateOf(reu.tipo == "cel") }
+    Column(
+        Modifier.fillMaxWidth().padding(bottom = 6.dp).background(c.cartao, RoundedCornerShape(14.dp))
+            .border(1.dp, c.linha, RoundedCornerShape(14.dp))
+            .padding(horizontal = if (compacto) 12.dp else 16.dp, vertical = 12.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().clickable { aberto = !aberto }, verticalAlignment = Alignment.CenterVertically) {
+            Text((if (aberto) "▾  " else "▸  ") + (if (reu.tipo == "meio") s["intro_t"] else s["intro_av_t"]).uppercase(),
+                fontSize = 13.sp, color = c.suave, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, modifier = Modifier.weight(1f))
+            val i = mods.indexOf(bruta)
+            if (i >= 0) Text(Textos.formatar(s["intro_modelo"], "n" to i + 1), fontSize = 13.sp, color = c.falaBorda, fontWeight = FontWeight.SemiBold)
+            else Text("✎", fontSize = 15.sp, color = c.falaBorda)
+        }
+        if (!aberto) {
+            Text(vm.introTexto(reu.tipo, reu.idioma, e, reu.inicio), color = c.suave, fontSize = 14.sp, maxLines = 2,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp).clickable { aberto = true })
+            return@Column
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+            mods.forEachIndexed { i, m ->
+                FilterChip(selected = bruta == m, onClick = { ed.valor(CamposFds.INTRO, if (i == 0) "" else m) },
+                    label = { Text(Textos.formatar(s["intro_modelo"], "n" to i + 1)) })
+            }
+            TextButton(onClick = aoModelos) { Text(s["intro_editar"]) }
+        }
+        OutlinedTextField(
+            value = bruta,
+            onValueChange = { v -> ed.valor(CamposFds.INTRO, if (v == mods.firstOrNull()) "" else v) },
+            label = { Text(s["intro_campo"]) }, minLines = 3,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
+        Text(s["intro_ajuda"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        if (reu.tipo != "meio") OutlinedTextField(
+            value = e.valor(CamposFds.AVISOS), onValueChange = { ed.valor(CamposFds.AVISOS, it) },
+            label = { Text(if (reu.tipo == "cel") s["f_avisos_cel"] else s["f_avisos"]) }, minLines = 2,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        )
+    }
+}
+
+/* ---------- modelos de introdução (editar os 3 modelos de cada reunião) ---------- */
+@Composable
+fun PainelModelos(vm: AppVM, aoFechar: () -> Unit) {
+    val c = LocalCores.current
+    val s = vm.tx
+    val lang = vm.cfg.lang
+    var tipo by rememberSaveable { mutableStateOf(vm.modo) }
+    Painel(s["mod_t"], aoFechar) {
+        Text(s["mod_info"], color = c.suave, fontSize = 15.sp)
+        Text(s["intro_ajuda"], color = c.suave, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        Row(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((t, rot) in listOf("meio" to s["aba_meio"], "fds" to s["aba_fds"], "cel" to s["aba_cel"]))
+                FilterChip(selected = tipo == t, onClick = { tipo = t }, label = { Text(rot) })
+        }
+        val mods = vm.modelos(lang, tipo)
+        mods.forEachIndexed { i, m ->
+            var txt by remember(tipo, lang, m) { mutableStateOf(m) }
+            val editado = vm.modeloEditado(lang, tipo, i)
+            Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).border(1.dp, c.linha, RoundedCornerShape(12.dp)).padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(Textos.formatar(s["intro_modelo"], "n" to i + 1), fontWeight = FontWeight.Bold, color = c.tinta, modifier = Modifier.weight(1f))
+                    if (editado) Text(s["mod_editado"], color = c.falaBorda, fontSize = 13.sp)
+                }
+                OutlinedTextField(txt, { txt = it }, minLines = 3, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 6.dp)) {
+                    Button(enabled = txt.trim() != m && txt.isNotBlank(), onClick = { vm.salvarModelo(lang, tipo, i, txt) }) { Text(s["salvar"]) }
+                    if (editado) OutlinedButton(onClick = { vm.salvarModelo(lang, tipo, i, "") }) { Text(s["mod_restaurar"], color = c.erro) }
+                }
+            }
         }
     }
 }
