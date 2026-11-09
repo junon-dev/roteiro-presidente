@@ -25,7 +25,7 @@ object ModelosIntro {
         "cel" to listOf(
             "[saudação]! Sejam todos muito bem-vindos. Ficamos muito felizes com a presença de cada um, especialmente de quem está aqui pela primeira vez. Estamos reunidos para lembrar a morte de Jesus Cristo, assim como ele pediu na noite antes de morrer: “Persistam em fazer isso em memória de mim.” Hoje, milhões de pessoas no mundo inteiro fazem o mesmo, lembrando o maior gesto de amor que já existiu: Jesus deu a sua vida por nós. O discurso vai nos ajudar a mostrar gratidão a Jeová e a Jesus por esse presente tão valioso.",
             "[saudação]. (PAUSA) Damos as boas-vindas a todos os presentes. Neste dia tão especial, milhões de pessoas no mundo inteiro estão reunidas para lembrar a ocasião mais importante do ano: a Ceia do Senhor. A congregação [congregação] tem muita alegria em receber vocês para esta importante reunião anual.",
-            "[saudação]! Sejam todos muito bem-vindos à Celebração da morte de Jesus Cristo. Ficamos muito felizes com a presença de cada um e esperamos que esta noite nos ajude a sentir ainda mais gratidão pelo amor de Jeová e de Jesus.",
+            "[saudação]! Sejam todos muito bem-vindos à Celebração da morte de Jesus Cristo, também chamada de Ceia do Senhor. Se é a primeira vez que você assiste a esta celebração, ficamos muito contentes por você estar aqui. Durante a reunião, o pão e o vinho serão passados, porque representam o corpo e o sangue que Jesus deu por nós. O discurso vai explicar por que essa morte é tão importante e como ela mostra o grande amor de Jeová e de Jesus por cada um de nós.",
         ),
     )
 
@@ -43,7 +43,7 @@ object ModelosIntro {
         "cel" to listOf(
             "¡[saludo]! Les damos a todos una cordial bienvenida. Nos alegra mucho que estén aquí, sobre todo quienes vienen por primera vez. Estamos reunidos para recordar la muerte de Jesucristo, tal como él pidió la noche antes de morir: “Sigan haciendo esto en memoria de mí”. Hoy, millones de personas en todo el mundo hacen lo mismo y recuerdan el mayor acto de amor de la historia: Jesús dio su vida por nosotros. El discurso nos ayudará a mostrar gratitud a Jehová y a Jesús por un regalo tan valioso.",
             "[saludo]. (PAUSA) Les extendemos una cordial bienvenida a todos los presentes. En este día tan especial, millones de personas alrededor del mundo estamos reunidos para recordar la ocasión más importante del año: “la Cena del Señor”. La congregación [congregación] se complace en reunirse con ustedes para esta importante reunión anual.",
-            "¡[saludo]! Bienvenidos a la Conmemoración de la muerte de Jesucristo. Nos alegra mucho que estén aquí, y esperamos que esta noche nos ayude a sentir aún más gratitud por el amor de Jehová y de Jesús.",
+            "¡[saludo]! Bienvenidos a la Conmemoración de la muerte de Jesucristo, también llamada la Cena del Señor. Si es la primera vez que asiste a esta celebración, nos alegra mucho que esté aquí. Durante la reunión se pasarán el pan y el vino, porque representan el cuerpo y la sangre que Jesús dio por nosotros. El discurso explicará por qué su muerte es tan importante y cómo muestra el gran amor que Jehová y Jesús nos tienen.",
         ),
     )
 
