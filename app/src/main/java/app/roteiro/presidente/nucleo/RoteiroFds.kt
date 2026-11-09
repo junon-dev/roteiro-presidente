@@ -132,7 +132,7 @@ object RoteiroFds {
             return if (n != null) { val (f, sub) = cantico(n, lang, tituloCantico, textoCantico); Triple(mapOf("n" to f), emptyMap(), sub) }
             else Triple(emptyMap(), mapOf("n" to nome(k, s["f_cantico_n"])), null)
         }
-        fun tituloCant(modelo: String, n: Int?) = Textos.formatar(s[modelo], "n" to (n?.toString() ?: "")).replace("  ", " ")
+        fun tituloCant(modelo: String, n: Int?) = Textos.formatar(s[modelo], "n" to (n?.toString() ?: "")).replace("  ", " ").trim()
 
         m.secao("publica", s.sec["publica"].orEmpty())
 
@@ -168,7 +168,8 @@ object RoteiroFds {
                 falas = listOf(segs), campos = Roteiro.nomesDe(listOf(segs))).copy(falaNoFim = true), 2)
         }
 
-        // 4. Depois do discurso: agradecimento, próxima semana, cântico e dirigente de A Sentinela
+        // 4. Depois do discurso (presidente): agradecimento, próxima semana e apresentação do dirigente de A Sentinela
+        val temAnuncio = ev != null && ev.anuncio.isNotBlank()
         val falasDepois = ArrayList<List<Seg>>()
         val instrDepois = ArrayList<String>()
         falasDepois.add(if (sc) Roteiro.fala(s["fds_sc_agr"], nomes = mapOf("sc" to nome(CamposFds.SC, s["f_sc_nome"])))
@@ -180,32 +181,34 @@ object RoteiroFds {
             else -> falasDepois.add(Roteiro.fala(s["fds_prox"], mapOf("tema" to proxima.tema.ifBlank { "________" },
                 "orador" to proxima.orador.ifBlank { "________" }, "cong" to proxima.cong.ifBlank { "________" })))
         }
-        val (tS, nmS, subS) = cant(CamposFds.CANT_S)
-        falasDepois.add(Roteiro.fala(s["fds_sent_fala"], tS, nmS + mapOf("dir" to nome(CamposFds.DIR, s["f_dir_s"]),
-            "leitor" to nome(CamposFds.LEITOR, s["f_leitor_s"]))))
+        falasDepois.add(Roteiro.fala(s["fds_sent_fala"], nomes = mapOf("dir" to nome(CamposFds.DIR, s["f_dir_s"]))))
         ev?.notas?.drop(1)?.lastOrNull()?.let { instrDepois.add(it) }
-        m.add(bloco("depois", s["fds_depois_t"], sec = "publica", subtitulo = subS?.let { tituloCant("cantico", num(CamposFds.CANT_S)) + " · " + it },
-            falas = falasDepois, instr = instrDepois), if (ev != null && ev.anuncio.isNotBlank()) 3 else 5)
+        m.add(bloco("depois", s["fds_depois_t"], sec = "publica", falas = falasDepois, instr = instrDepois), if (temAnuncio) 1 else 2)
 
-        // 5. Estudo de A Sentinela
+        // 5. Estudo de A Sentinela — conduzido pelo dirigente: cântico, estudo e encerramento
         m.secao("sentinela", s.sec["sentinela"].orEmpty())
         val dir = e.valor(CamposFds.DIR).ifBlank { "________" }
         val leitor = e.valor(CamposFds.LEITOR).ifBlank { "________" }
+        val nS = num(CamposFds.CANT_S)
+        val subS = nS?.let { cantico(it, lang, tituloCantico, textoCantico).second }
+        m.add(bloco("cantS", tituloCant("cantico", nS), sec = "sentinela", subtitulo = subS,
+            instr = listOf(Textos.formatar(s["fds_cant_instr"], "dir" to dir))), if (temAnuncio) 2 else 3)
         m.add(bloco("sentinela", s["fds_sent_t"], sec = "sentinela", subtitulo = e.valor(CamposFds.ARTIGO).trim().ifBlank { null },
             instr = listOfNotNull(Textos.formatar(s["fds_sent_instr"], "dir" to dir, "leitor" to leitor),
                 if (sc) s["fds_sc_sent_instr"] else null)), if (sc) 30 else 60)
 
-        // 6. Discurso final do SC
-        if (sc) m.add(bloco("scFinal", s["fds_sc_final_t"], estilo = Estilo.SC,
+        // 6. Discurso de serviço do SC (apresentado pelo dirigente de A Sentinela)
+        if (sc) m.add(bloco("scFinal", s["fds_sc_final_t"], estilo = Estilo.SC, sec = "sentinela",
             subtitulo = e.valor(CamposFds.SC_TEMA_F).trim().ifBlank { null },
-            falas = listOf(Roteiro.fala(s["fds_sc_final_fala"], nomes = mapOf("sc" to nome(CamposFds.SC, s["f_sc_nome"]),
-                "tema" to nome(CamposFds.SC_TEMA_F, s["f_scTemaF"]))))), 30)
+            instr = listOf(Textos.formatar(s["fds_sc_final_instr"], "dir" to dir, "sc" to e.valor(CamposFds.SC).ifBlank { "________" }))), 30)
 
-        // 7. Cântico final e oração
-        val (tF, nmF, subF) = cant(CamposFds.CANT_F)
-        m.add(bloco("fim", tituloCant("cantico_oracao", num(CamposFds.CANT_F)), subtitulo = subF, sec = "sentinela",
-            falas = listOf(Roteiro.fala(s["fim_fala"], tF, nmF + ("f" to nome(CamposFds.ORA_FIM, s["f_oracaoF"])))),
-            instr = listOf(if (sc) s["fds_sc_fim_instr"] else s["fds_fim_instr"])), 5, ultimo = true)
+        // 7. Cântico final e oração (o dirigente encerra a reunião)
+        val nF = num(CamposFds.CANT_F)
+        val subF = nF?.let { cantico(it, lang, tituloCantico, textoCantico).second }
+        m.add(bloco("fim", tituloCant("cantico_oracao", nF), subtitulo = subF, sec = "sentinela",
+            instr = listOfNotNull(Textos.formatar(s["fds_fim_instr"], "dir" to dir),
+                Textos.formatar(s["fds_ora_instr"], "f" to e.valor(CamposFds.ORA_FIM).ifBlank { "________" }),
+                if (sc) s["fds_sc_fim_instr"] else null)), 5, ultimo = true)
         return m.pronto()
     }
 
@@ -222,7 +225,7 @@ object RoteiroFds {
         val m = Montador(Roteiro.minDe(inicio), 58, "58 min")
         fun nome(k: String, rot: String) = Campo(k, rot)
         fun cant(n: Int?): Pair<String, String?> = if (n != null) cantico(n, lang, tituloCantico, textoCantico) else "________" to null
-        fun tituloCant(modelo: String, n: Int?) = Textos.formatar(s[modelo], "n" to (n?.toString() ?: "")).replace("  ", " ")
+        fun tituloCant(modelo: String, n: Int?) = Textos.formatar(s[modelo], "n" to (n?.toString() ?: "")).replace("  ", " ").trim()
         val tema = ev?.tema.orEmpty()
 
         m.secao("celebracao", s["cel_meeting"])
