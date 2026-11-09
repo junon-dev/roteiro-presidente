@@ -69,6 +69,7 @@ data class Config(
     val pastaBackup: String? = null,   // pasta (URI) da cópia automática
     val inicioFds: String = "09:00",   // horário da reunião do fim de semana
     val diaFds: Int = 7,               // 6 = sábado, 7 = domingo
+    val congregacao: String = "",      // nome da congregação (usado nas boas-vindas)
 )
 
 /** Estado de uma semana: visita do SC, salas adicionais e valores digitados (nomes, anotações, marcações). */

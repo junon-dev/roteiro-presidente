@@ -409,7 +409,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         }
         val orador = if (tipo == "fds" && e.sc) e.valor(CamposFds.SC) else e.valor(CamposFds.ORADOR)
         return app.roteiro.presidente.nucleo.ModelosIntro.preencher(introBruta(tipo, lang, e),
-            RoteiroFds.saudacao(inicio, Textos.de(lang)), tema, orador)
+            RoteiroFds.saudacao(inicio, Textos.de(lang)), tema, orador, cfg.congregacao)
     }
 
     /* ---------- importação de arquivos ---------- */

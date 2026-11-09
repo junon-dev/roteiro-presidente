@@ -172,6 +172,12 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
             }) { Text(vm.cfg.inicio, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         }
         Linha(s["abertura"]) { Contador(vm.cfg.abertura, 1, 10) { v -> vm.mudarCfg { it.copy(abertura = v) } } }
+        Linha(s["f_congregacao"], largo = true) {
+            var nomeCong by remember { mutableStateOf(vm.cfg.congregacao) }
+            OutlinedTextField(nomeCong, { v -> nomeCong = v; vm.mudarCfg { it.copy(congregacao = v.trim()) } }, singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Words),
+                modifier = Modifier.widthIn(min = 220.dp, max = 360.dp))
+        }
         Linha(s["horaIniFds"]) {
             TextButton(onClick = {
                 val m = app.roteiro.presidente.nucleo.Roteiro.minDe(vm.cfg.inicioFds)

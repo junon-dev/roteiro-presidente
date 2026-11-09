@@ -6,6 +6,7 @@ package app.roteiro.presidente.nucleo
  *   [saudação] / [saludo]      → Bom dia / Boa tarde / Boa noite (pelo horário)
  *   [tema]                     → tema do discurso
  *   [orador] / [discursante]   → nome do orador
+ *   [congregação] / [congregación] → nome da congregação (Configurações)
  */
 object ModelosIntro {
     val TIPOS = listOf("meio", "fds", "cel")
@@ -22,9 +23,9 @@ object ModelosIntro {
             "[saudação]! Sejam muito bem-vindos. Hoje vamos ouvir o discurso “[tema]” e depois teremos o Estudo de A Sentinela. Com certeza vamos aprender muito da Palavra de Deus.",
         ),
         "cel" to listOf(
-            "[saudação]! Sejam todos muito bem-vindos. Estamos reunidos para a Celebração da morte de Jesus Cristo, também chamada de Ceia do Senhor. Esta é a única celebração anual que Jesus mandou seus seguidores fazerem. Na noite antes de morrer, ele disse: “Persistam em fazer isso em memória de mim.” (Lucas 22:19) Por isso, hoje milhões de pessoas no mundo inteiro estão reunidas, como nós, para lembrar o que Jesus fez por nós.",
-            "[saudação] a todos! Que alegria ver tantas pessoas aqui. Há cerca de dois mil anos, nesta mesma data do calendário bíblico, 14 de nisã, Jesus passou a última noite com os apóstolos e deu início a esta celebração. Hoje vamos lembrar o grande amor que Jeová e Jesus mostraram por nós, e ficamos muito felizes por vocês estarem aqui conosco.",
-            "[saudação]! Sejam muito bem-vindos. Esta noite vamos lembrar o maior presente que Deus nos deu: o resgate. Jesus deu a sua vida por nós. O pão e o vinho que serão passados representam o corpo e o sangue de Jesus, e o discurso vai explicar o que o sacrifício dele pode significar para cada um de nós. Agradecemos de coração a presença de todos.",
+            "[saudação]! Sejam todos muito bem-vindos. Ficamos muito felizes com a presença de cada um, especialmente de quem está aqui pela primeira vez. Estamos reunidos para lembrar a morte de Jesus Cristo, assim como ele pediu na noite antes de morrer: “Persistam em fazer isso em memória de mim.” Hoje, milhões de pessoas no mundo inteiro fazem o mesmo, lembrando o maior gesto de amor que já existiu: Jesus deu a sua vida por nós. O discurso vai nos ajudar a mostrar gratidão a Jeová e a Jesus por esse presente tão valioso.",
+            "[saudação]. (PAUSA) Damos as boas-vindas a todos os presentes. Neste dia tão especial, milhões de pessoas no mundo inteiro estão reunidas para lembrar a ocasião mais importante do ano: a Ceia do Senhor. A congregação [congregação] tem muita alegria em receber vocês para esta importante reunião anual.",
+            "[saudação]! Sejam todos muito bem-vindos à Celebração da morte de Jesus Cristo. Ficamos muito felizes com a presença de cada um e esperamos que esta noite nos ajude a sentir ainda mais gratidão pelo amor de Jeová e de Jesus.",
         ),
     )
 
@@ -40,17 +41,18 @@ object ModelosIntro {
             "¡[saludo]! Bienvenidos. Hoy escucharemos el discurso «[tema]» y después tendremos el Estudio de La Atalaya. Sin duda aprenderemos mucho de la Palabra de Dios.",
         ),
         "cel" to listOf(
-            "¡[saludo]! Les damos la más cordial bienvenida. Estamos reunidos para la Conmemoración de la muerte de Jesucristo, también llamada la Cena del Señor. Es la única celebración anual que Jesús mandó a sus seguidores observar. La noche antes de morir, dijo: “Sigan haciendo esto en memoria de mí” (Lucas 22:19). Por eso, hoy millones de personas en todo el mundo están reunidas, como nosotros, para recordar lo que Jesús hizo por nosotros.",
-            "¡[saludo] a todos! Qué alegría ver a tantas personas aquí. Hace unos dos mil años, en esta misma fecha del calendario bíblico, el 14 de nisán, Jesús pasó su última noche con los apóstoles y dio inicio a esta celebración. Hoy recordaremos el gran amor que Jehová y Jesús han mostrado por nosotros, y nos alegra mucho que nos acompañen.",
-            "¡[saludo]! Bienvenidos. Esta noche recordaremos el mayor regalo que Dios nos ha dado: el rescate. Jesús dio su vida por nosotros. El pan y el vino que se pasarán representan el cuerpo y la sangre de Jesús, y el discurso explicará lo que su sacrificio puede significar para cada uno de nosotros. Les agradecemos de corazón su presencia.",
+            "¡[saludo]! Les damos a todos una cordial bienvenida. Nos alegra mucho que estén aquí, sobre todo quienes vienen por primera vez. Estamos reunidos para recordar la muerte de Jesucristo, tal como él pidió la noche antes de morir: “Sigan haciendo esto en memoria de mí”. Hoy, millones de personas en todo el mundo hacen lo mismo y recuerdan el mayor acto de amor de la historia: Jesús dio su vida por nosotros. El discurso nos ayudará a mostrar gratitud a Jehová y a Jesús por un regalo tan valioso.",
+            "[saludo]. (PAUSA) Les extendemos una cordial bienvenida a todos los presentes. En este día tan especial, millones de personas alrededor del mundo estamos reunidos para recordar la ocasión más importante del año: “la Cena del Señor”. La congregación [congregación] se complace en reunirse con ustedes para esta importante reunión anual.",
+            "¡[saludo]! Bienvenidos a la Conmemoración de la muerte de Jesucristo. Nos alegra mucho que estén aquí, y esperamos que esta noche nos ayude a sentir aún más gratitud por el amor de Jehová y de Jesús.",
         ),
     )
 
     fun padrao(lang: String, tipo: String): List<String> = (if (lang == "es") es else pt)[tipo].orEmpty()
 
     /** Troca os marcadores pelo texto da reunião. */
-    fun preencher(texto: String, saudacao: String, tema: String, orador: String): String {
+    fun preencher(texto: String, saudacao: String, tema: String, orador: String, congregacao: String = ""): String {
         var t = texto
+        for (k in listOf("[congregação]", "[congregacao]", "[congregación]", "[congregacion]")) t = t.replace(k, congregacao.ifBlank { "________" }, ignoreCase = true)
         for (k in listOf("[saudação]", "[saudacao]", "[saludo]")) t = t.replace(k, saudacao, ignoreCase = true)
         t = t.replace("[tema]", tema.ifBlank { "________" }, ignoreCase = true)
         for (k in listOf("[orador]", "[discursante]")) t = t.replace(k, orador.ifBlank { "________" }, ignoreCase = true)
