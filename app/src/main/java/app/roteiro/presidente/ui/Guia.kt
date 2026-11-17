@@ -141,7 +141,7 @@ fun TelaGuia(vm: AppVM, tipo: String) {
         Surface(
             shape = RoundedCornerShape(20.dp), color = c.cartao,
             modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(if (compacto) 0.94f else 0.9f)
-                .heightIn(max = 640.dp).fillMaxHeight(if (compacto) 0.86f else 0.9f),
+                .heightIn(max = if (compacto) 760.dp else 640.dp).fillMaxHeight(if (compacto) 0.9f else 0.9f),
         ) {
             Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 6.dp, bottom = 14.dp)) {
                 // topo: título das novidades (ou "Tela 1 de 5") e "Pular"
@@ -155,7 +155,7 @@ fun TelaGuia(vm: AppVM, tipo: String) {
                     if (!ultima) TextButton(onClick = fechar) { Text(s["guia_pular"]) }
                 }
                 HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { i ->
-                    PaginaGuia(vm, paginas[i].second)
+                    PaginaGuia(vm, paginas[i].second, compacto)
                 }
                 // bolinhas
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center) {
@@ -191,21 +191,24 @@ fun TelaGuia(vm: AppVM, tipo: String) {
 }
 
 @Composable
-private fun PaginaGuia(vm: AppVM, d: Dicas.Dica) {
+private fun PaginaGuia(vm: AppVM, d: Dicas.Dica, compacto: Boolean) {
     val c = LocalCores.current
     val s = vm.tx
     Box(Modifier.fillMaxSize().padding(end = 8.dp), contentAlignment = Alignment.Center) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(84.dp).background(c.falaFundo, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(painterResource(iconeDica(d.icone)), null, tint = c.falaBorda, modifier = Modifier.size(42.dp))
+            // no celular, ícone e títulos menores para caber tudo sem rolar
+            Box(Modifier.size(if (compacto) 60.dp else 84.dp).background(c.falaFundo, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(painterResource(iconeDica(d.icone)), null, tint = c.falaBorda, modifier = Modifier.size(if (compacto) 30.dp else 42.dp))
             }
-            Spacer(Modifier.height(18.dp))
-            Text(d.titulo, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.tinta, textAlign = TextAlign.Center, lineHeight = 27.sp)
-            Spacer(Modifier.height(10.dp))
-            Text(d.texto, fontSize = 16.sp, color = c.suave, textAlign = TextAlign.Center, lineHeight = 23.sp)
+            Spacer(Modifier.height(if (compacto) 12.dp else 18.dp))
+            Text(d.titulo, fontSize = if (compacto) 20.sp else 22.sp, fontWeight = FontWeight.Bold, color = c.tinta,
+                textAlign = TextAlign.Center, lineHeight = if (compacto) 24.sp else 27.sp)
+            Spacer(Modifier.height(if (compacto) 8.dp else 10.dp))
+            Text(d.texto, fontSize = if (compacto) 15.sp else 16.sp, color = c.suave, textAlign = TextAlign.Center,
+                lineHeight = if (compacto) 21.sp else 23.sp)
             when (d.acao) {
                 "idioma" -> {
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(if (compacto) 12.dp else 18.dp))
                     Text(s["guia_idioma"], fontSize = 14.sp, color = c.suave)
                     Spacer(Modifier.height(6.dp))
                     Row(Modifier.border(1.dp, c.linha, RoundedCornerShape(10.dp))) {
