@@ -209,6 +209,16 @@ object Textos {
         "passoAnt" to "Voltar",
         "pausar" to "Pausar",
         "continuar" to "Continuar",
+        "aseguir" to "A seguir",
+        "excedido" to "Tempo excedido",
+        "restamDe" to "restam de {t}",
+        "pipCfg" to "Janela flutuante ao sair do app",
+        "pip_info" to "No modo Presidir, ao ir para outro aplicativo, a parte atual e o cronômetro continuam numa janelinha por cima dos outros apps.",
+        "notifCfg" to "Cronômetro na notificação",
+        "notif_info" to "Enquanto você preside, mostra a parte e o tempo na barra de notificações, com botões para voltar, pausar e avançar.",
+        "pipBotao" to "Janela flutuante",
+        "canalAoVivo" to "Reunião em andamento",
+        "mesaRoteiro" to "Ver roteiro completo",
     )
     private val ptListas: Map<String, List<String>> = mapOf(
         "lembretes" to listOf("Nenhuma parte passa do tempo — nem os seus comentários. Entre as partes, seja bem breve.", "Quem passar do tempo recebe conselho em particular (você ou o conselheiro assistente).", "Você pode anunciar de um microfone de pedestal enquanto o próximo vai para a tribuna, e ficar sentado no palco durante a Leitura da Bíblia e o Faça Seu Melhor no Ministério.", "Não anuncie antes da parte qual é a lição do estudante.", "A reunião inteira, com cânticos e orações, dura 1 hora e 45 minutos."),
@@ -421,6 +431,16 @@ object Textos {
         "passoAnt" to "Volver",
         "pausar" to "Pausar",
         "continuar" to "Continuar",
+        "aseguir" to "A continuación",
+        "excedido" to "Tiempo excedido",
+        "restamDe" to "quedan de {t}",
+        "pipCfg" to "Ventana flotante al salir de la app",
+        "pip_info" to "En el modo Presidir, al ir a otra aplicación, la parte actual y el cronómetro siguen en una ventanita sobre las demás apps.",
+        "notifCfg" to "Cronómetro en la notificación",
+        "notif_info" to "Mientras preside, muestra la parte y el tiempo en la barra de notificaciones, con botones para volver, pausar y avanzar.",
+        "pipBotao" to "Ventana flotante",
+        "canalAoVivo" to "Reunión en curso",
+        "mesaRoteiro" to "Ver guion completo",
     )
     private val esListas: Map<String, List<String>> = mapOf(
         "lembretes" to listOf("Ninguna parte se pasa del tiempo, ni siquiera sus comentarios. Entre las partes, sea muy breve.", "Quien se pase del tiempo recibe consejo en privado (usted o el consejero auxiliar).", "Puede anunciar desde un micrófono de pie mientras el siguiente va a la plataforma, y quedarse sentado en la plataforma durante la Lectura de la Biblia y Seamos mejores maestros.", "No anuncie antes de la parte cuál es la lección del estudiante.", "Toda la reunión, con canciones y oraciones, dura 1 hora y 45 minutos."),

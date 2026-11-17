@@ -6,7 +6,11 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import androidx.test.core.app.ApplicationProvider
 import app.roteiro.presidente.ui.PainelConfig
 import app.roteiro.presidente.ui.PainelRelatorio
+import app.roteiro.presidente.ui.TelaMesa
+import app.roteiro.presidente.ui.TelaPip
 import app.roteiro.presidente.ui.TelaPrincipal
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import app.roteiro.presidente.ui.TemaApp
 import org.junit.Rule
 import org.junit.Test
@@ -115,6 +119,39 @@ abstract class TelasBase(private val prefixo: String) {
         val passos = vm.reuniaoAtual()!!.rot.passos
         regra.runOnIdle { vm.iniciarPresidir(passos.size); vm.responderRelogio(null); vm.irPasso(1, passos.size); vm.responderRelogio(null) }
         foto("13-fds-presidir")
+    }
+
+    /** Janela flutuante (picture-in-picture) e "modo mesa" do dobrável meio aberto. */
+    @Test
+    fun aoVivo() {
+        val vm = AppVM(ApplicationProvider.getApplicationContext<Application>()).apply { relogioAutomatico = false }
+        vm.irParaSemana("pt-2026-10-19")
+        val passos = vm.roteiro(vm.semanaAtual()!!).passos
+        vm.iniciarPresidir(passos.size); vm.responderRelogio(null)
+        vm.irPasso(passos.indexOfFirst { it.bloco == "p4" }, passos.size); vm.responderRelogio(null)
+        vm.agora = System.currentTimeMillis() + 46_000   // 46 s de parte
+        val tela = androidx.compose.runtime.mutableStateOf("pip")
+        regra.setContent {
+            TemaApp(vm.cfg.tema, vm.cfg.fonte) {
+                when (tela.value) {
+                    "pip" -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(320.dp, 180.dp)) { TelaPip(vm) }
+                    "pipPeq" -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(240.dp, 135.dp)) { TelaPip(vm) }
+                    else -> {
+                        val alt = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+                        val px = with(androidx.compose.ui.platform.LocalDensity.current) { (alt / 2).dp.roundToPx() }
+                        TelaMesa(vm, px) {}
+                    }
+                }
+            }
+        }
+        foto("14-janela-flutuante")
+        regra.runOnIdle { tela.value = "pipPeq"; vm.agora = System.currentTimeMillis() + 200_000 }
+        foto("15-janela-flutuante-excedido")
+        regra.runOnIdle { tela.value = "mesa"; vm.agora = System.currentTimeMillis() + 46_000 }
+        foto("16-modo-mesa")
+        val info = vm.infoAoVivo()
+        org.junit.Assert.assertNotNull(info)
+        org.junit.Assert.assertEquals(passos.indexOfFirst { it.bloco == "p4" }, info!!.passo)
     }
 
     @Test

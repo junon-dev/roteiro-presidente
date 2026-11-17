@@ -4,6 +4,15 @@ Aplicativo nativo para tablet Android que conduz a reunião Vida e Ministério e
 roteiro do presidente com falas sugeridas, designações, cronômetro (modo Presidir), elogios e conselhos
 com os pontos das lições (th e lmd), visita do superintendente de circuito e salas adicionais. Funciona sem internet.
 
+## Acompanhar a reunião fora do app (versão 4.1)
+Durante o modo Presidir, ao ir para outro aplicativo, a reunião continua visível:
+- **Janela flutuante** (picture-in-picture): parte atual, cronômetro e a próxima parte, com botões voltar/pausar/avançar.
+  Entra sozinha ao sair do app (Android 12+) ou pelo botão da janela na barra do Presidir.
+- **Notificação com o cronômetro**, com os mesmos botões. No Android 16 pode aparecer como chip na barra de status (Live Update).
+- **Dobráveis**: o roteiro se adapta ao abrir e fechar; meio aberto na horizontal ("modo mesa") mostra o cronômetro em cima e os botões embaixo.
+
+As duas opções podem ser desligadas em Configurações. Código em `aovivo/` (serviço da notificação) e `ui/AoVivoUi.kt`.
+
 ## Gerar o APK
 Cada envio para a branch `main` roda os testes, compila o APK assinado e publica em **Releases**
 (workflow `.github/workflows/gerar-apk.yml`). Para compilar de novo: **Actions → Gerar APK → Run workflow**.

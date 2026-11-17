@@ -70,6 +70,8 @@ data class Config(
     val inicioFds: String = "09:00",   // horário da reunião do fim de semana
     val diaFds: Int = 7,               // 6 = sábado, 7 = domingo
     val congregacao: String = "",      // nome da congregação (usado nas boas-vindas)
+    val pip: Boolean = true,           // janela flutuante (picture-in-picture) ao sair do app durante o modo Presidir
+    val notifAoVivo: Boolean = true,   // notificação com o cronômetro durante o modo Presidir
 )
 
 /** Estado de uma semana: visita do SC, salas adicionais e valores digitados (nomes, anotações, marcações). */

@@ -192,6 +192,8 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
         Linha(s["som"]) { Switch(vm.cfg.som, { on -> vm.mudarCfg { it.copy(som = on) } }) }
         Linha(s["vibrar"]) { Switch(vm.cfg.vibrar, { on -> vm.mudarCfg { it.copy(vibrar = on) } }) }
         Linha(s["tela"]) { Switch(vm.cfg.tela, { on -> vm.mudarCfg { it.copy(tela = on) } }) }
+        Linha(s["pipCfg"], s["pip_info"]) { Switch(vm.cfg.pip, { on -> vm.mudarCfg { it.copy(pip = on) } }) }
+        Linha(s["notifCfg"], s["notif_info"]) { Switch(vm.cfg.notifAoVivo, { on -> vm.mudarCfg { it.copy(notifAoVivo = on) } }) }
         Linha(s["palcoCfg"], s["palco_info"]) { Switch(vm.cfg.palco, { on -> vm.mudarCfg { it.copy(palco = on) }; vm.palco = on }) }
         // Tamanho do texto: barra com 6 posições, como no JW Library
         Text(s["tamTexto"], fontWeight = FontWeight.SemiBold, color = c.tinta, modifier = Modifier.padding(top = 10.dp))

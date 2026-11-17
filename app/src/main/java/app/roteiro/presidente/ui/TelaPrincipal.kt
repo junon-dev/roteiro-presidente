@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.roteiro.presidente.AppVM
 import app.roteiro.presidente.R
+import app.roteiro.presidente.atividadePrincipal
 import app.roteiro.presidente.dados.Impressao
 import app.roteiro.presidente.nucleo.ItemRoteiro
 import app.roteiro.presidente.nucleo.Roteiro
@@ -502,6 +503,9 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
     }
     val corStatus = when { Math.abs(dif) < 1 -> Color.White; dif > 0 -> Color(0xFFFFB4A8); else -> Color(0xFF8FE3B0) }
     val linhaStatus = "${s["previsto"]} ${Roteiro.hm(p.ini)} · $status" + if (pausado) " · ${s["pausado"]}" else ""
+    // Botão da janela flutuante (só em aparelhos que têm picture-in-picture)
+    val atividade = LocalContext.current.atividadePrincipal()
+    val podePip = atividade?.suportaPip() == true
 
     @Composable
     fun Botoes(tam: Int) {
@@ -520,7 +524,13 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
     Surface(color = c.barra, contentColor = Color.White, shadowElevation = 8.dp) {
         if (compacto) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
-                Text(p.titulo, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(p.titulo, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f))
+                    if (podePip) IconButton(onClick = { atividade?.entrarPip() }, modifier = Modifier.size(36.dp)) {
+                        Icon(painterResource(R.drawable.ic_janela), s["pipBotao"], Modifier.size(22.dp), tint = Color.White)
+                    }
+                }
                 Text(linhaStatus, fontSize = 13.sp, color = corStatus, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                     Text(txtRel, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = if (pausado) 0.6f else 1f),
@@ -554,6 +564,12 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
                 Column(Modifier.weight(1f)) {
                     Text(p.titulo, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(linhaStatus, fontSize = 14.sp, color = corStatus)
+                }
+                if (podePip) {
+                    BotaoBarra(tamanho = 58, onClick = { atividade?.entrarPip() }) {
+                        Icon(painterResource(R.drawable.ic_janela), s["pipBotao"], Modifier.size(26.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
                 }
                 Botoes(58)
             }

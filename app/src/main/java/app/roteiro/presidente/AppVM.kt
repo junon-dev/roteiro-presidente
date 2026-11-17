@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import app.roteiro.presidente.aovivo.AoVivo
 import app.roteiro.presidente.dados.Arquivo
 import app.roteiro.presidente.dados.Avisos
 import app.roteiro.presidente.dados.EstadoSemanaDto
@@ -104,6 +105,7 @@ class AppVM(app: Application) : AndroidViewModel(app) {
     private var gravacao: Job? = null
     private fun mudar(f: (Arquivo) -> Arquivo) {
         dados = f(dados)
+        publicarAoVivo()
         gravacao?.cancel()
         val copia = dados
         gravacao = viewModelScope.launch(Dispatchers.IO) { delay(300); repo.gravar(copia) }
@@ -692,8 +694,85 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         if (avisado || durMin <= 0 || dados.presidir?.pausadoEm != null) return
         if (decorrido() >= durMin * 60) {
             avisado = true
+            // o serviço da notificação também avisa quando o app está em segundo plano: só um dos dois toca
+            if (!AoVivo.marcarAviso(dados.presidir?.inicioPasso ?: 0L)) return
             if (cfg.vibrar) Avisos.vibrar(getApplication())
             if (cfg.som) Avisos.bipe()
         }
+    }
+
+    /* ---------- janela flutuante e notificação (app em segundo plano) ---------- */
+
+    /** Parte em andamento no modo Presidir (null se não estiver presidindo esta reunião). */
+    fun passoAtual(): Passo? {
+        if (!presidindo) return null
+        val passos = passosDaSemana()
+        return passos.getOrNull((dados.presidir?.passo ?: 0).coerceIn(0, (passos.size - 1).coerceAtLeast(0)))
+    }
+
+    /** Seção da parte (tesouros, ministerio, vida…), para a cor da etiqueta. */
+    fun secDoPasso(p: Passo): String? = reuniaoAtual()?.rot?.itens
+        ?.firstNotNullOfOrNull { (it as? app.roteiro.presidente.nucleo.ItemRoteiro.BlocoR)?.b?.takeIf { b -> b.id == p.bloco }?.sec }
+
+    /** Próximas partes depois da atual (para "A seguir"). */
+    fun proximosPassos(n: Int): List<Passo> {
+        if (!presidindo) return emptyList()
+        val i = dados.presidir?.passo ?: return emptyList()
+        return passosDaSemana().drop(i + 1).take(n)
+    }
+
+    fun avancar(delta: Int) {
+        if (!presidindo) return
+        val total = passosDaSemana().size
+        val i = (dados.presidir?.passo ?: 0) + delta
+        if (i < 0) return
+        if (i >= total) { avisar(tx["fim"]); return }
+        irPasso(i, total)
+    }
+
+    fun infoAoVivo(): AoVivo.Info? {
+        val p = dados.presidir ?: return null
+        if (!p.ativo || p.sem != idAtual()) return null
+        val r = reuniaoAtual() ?: return null
+        val passos = r.rot.passos
+        if (passos.isEmpty()) return null
+        val i = p.passo.coerceIn(0, passos.size - 1)
+        val atual = passos[i]
+        val s = tx
+        return AoVivo.Info(
+            nomeApp = nomeApp, titulo = atual.titulo, sec = secDoPasso(atual), proximo = passos.getOrNull(i + 1)?.titulo,
+            durSeg = atual.dur * 60, inicioPasso = p.inicioPasso, acumuladoPausa = p.acumuladoPausa, pausadoEm = p.pausadoEm,
+            inicioReuniao = p.inicioReuniao.takeIf { it > 0 } ?: p.inicioPasso, totalMin = r.rot.total,
+            passo = i, totalPassos = passos.size, som = cfg.som, vibrar = cfg.vibrar,
+            notificacao = cfg.notifAoVivo, pip = cfg.pip,
+            tPausar = s["pausar"], tContinuar = s["continuar"], tAvancar = s["proxPasso"], tVoltar = s["passoAnt"],
+            tASeguir = s["aseguir"], tPausado = s["pausado"].replaceFirstChar { it.uppercase() },
+            tCanal = s["canalAoVivo"], tExcedido = s["excedido"],
+        )
+    }
+
+    private fun publicarAoVivo() {
+        AoVivo.estado.value = try { infoAoVivo() } catch (e: RuntimeException) { null }
+    }
+
+    private fun executarComando(c: String) {
+        if (!presidindo) return
+        when (c) {
+            AoVivo.PAUSAR -> pausar()
+            AoVivo.AVANCAR -> avancar(1)
+            AoVivo.VOLTAR -> avancar(-1)
+        }
+    }
+
+    // Fica no fim da classe: roda depois que todas as propriedades acima já existem.
+    init {
+        viewModelScope.launch { AoVivo.comandos.collect { executarComando(it) } }
+        publicarAoVivo()
+    }
+
+    override fun onCleared() {
+        // A tela do app foi fechada: a notificação continua com o cronômetro, mas sem os botões
+        AoVivo.estado.value = AoVivo.estado.value?.copy(comControles = false)
+        super.onCleared()
     }
 }
