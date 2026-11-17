@@ -28,9 +28,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import app.roteiro.presidente.aovivo.AoVivo
+import app.roteiro.presidente.aovivo.JanelaControles
 import app.roteiro.presidente.aovivo.ReceptorComandos
 import app.roteiro.presidente.aovivo.ServicoPresidir
 import app.roteiro.presidente.dados.Migracao
+import app.roteiro.presidente.ui.TelaGuia
 import app.roteiro.presidente.ui.TelaMesa
 import app.roteiro.presidente.ui.TelaPip
 import app.roteiro.presidente.ui.TelaPrincipal
@@ -90,7 +92,11 @@ class MainActivity : ComponentActivity() {
                 when {
                     emPip -> TelaPip(vm)
                     dobra != null && vm.presidindo && !verRoteiro -> TelaMesa(vm, dobra) { verRoteiro = true }
-                    else -> TelaPrincipal(vm)
+                    else -> {
+                        TelaPrincipal(vm)
+                        // apresentação (ao abrir), novidades da versão ou "Ver apresentação" da Ajuda
+                        vm.guia?.let { TelaGuia(vm, it) }
+                    }
                 }
             }
         }
@@ -98,12 +104,23 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // de volta ao app: a janela com os botões não é mais necessária
+        JanelaControles.esconder()
         // Se o serviço não pôde começar com o app em segundo plano, começa agora
         if (AoVivo.estado.value?.notificacao == true) ServicoPresidir.iniciar(this)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // a permissão "Sobrepor a outros apps" pode ter mudado: decide de novo entre a janela com botões e o picture-in-picture
+        atualizarPip(AoVivo.estado.value)
+    }
+
     override fun onStop() {
         super.onStop()
+        // saiu do app durante a reunião: mostra a janela com os botões sempre à vista (se permitida)
+        val info = AoVivo.estado.value
+        if (info != null && usaControles(info) && !isChangingConfigurations && !isInPictureInPictureMode) JanelaControles.mostrar(this)
         vm.gravarAgora()
         vm.copiarAgora()   // cópia automática na pasta escolhida (se configurada)
     }
@@ -111,6 +128,7 @@ class MainActivity : ComponentActivity() {
     /* ---------- janela flutuante (picture-in-picture) ---------- */
 
     private fun aoMudarAoVivo(info: AoVivo.Info?) {
+        if (info == null) JanelaControles.esconder()
         atualizarPip(info)
         val notificar = info != null && info.notificacao
         if (notificar && !servicoPedido) {
@@ -127,6 +145,13 @@ class MainActivity : ComponentActivity() {
     fun suportaPip(): Boolean =
         Build.VERSION.SDK_INT >= 26 && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
 
+    /** A janela flutuante será a de botões sempre à vista (ligada nas Configurações e com a permissão dada). */
+    fun usaControles(info: AoVivo.Info?): Boolean =
+        info != null && info.pip && info.janelaControles && JanelaControles.permitido(this)
+
+    /** Há alguma janela flutuante neste aparelho (a de botões ou o picture-in-picture). */
+    fun temJanela(): Boolean = suportaPip() || JanelaControles.permitido(this)
+
     @RequiresApi(26)
     private fun parametrosPip(info: AoVivo.Info?): PictureInPictureParams {
         val b = PictureInPictureParams.Builder()
@@ -134,7 +159,7 @@ class MainActivity : ComponentActivity() {
             .setActions(if (info != null) acoesPip(info) else emptyList())
         if (Build.VERSION.SDK_INT >= 31) {
             // Android 12+: entra sozinho na janela ao ir para a tela inicial ou outro app
-            b.setAutoEnterEnabled(info != null && info.pip)
+            b.setAutoEnterEnabled(info != null && info.pip && !usaControles(info))
             b.setSeamlessResizeEnabled(false)   // conteúdo de texto, não vídeo
         }
         return b.build()
@@ -162,9 +187,16 @@ class MainActivity : ComponentActivity() {
 
     /** Abre a janela flutuante (botão na barra do modo Presidir, ou ao sair do app no Android 8 a 11). */
     fun entrarPip(manual: Boolean = true): Boolean {
-        if (Build.VERSION.SDK_INT < 26 || !suportaPip()) return false
         val info = AoVivo.estado.value ?: return false
         if (!manual && !info.pip) return false
+        if (info.janelaControles && JanelaControles.permitido(this)) {
+            // janela com botões: ao sair do app ela aparece no onStop; pelo botão, aparece já e o app vai para trás
+            if (!manual) return false
+            JanelaControles.mostrar(this, manual = true)
+            moveTaskToBack(true)
+            return true
+        }
+        if (Build.VERSION.SDK_INT < 26 || !suportaPip()) return false
         return try { enterPictureInPictureMode(parametrosPip(info)) } catch (_: RuntimeException) { false }
     }
 

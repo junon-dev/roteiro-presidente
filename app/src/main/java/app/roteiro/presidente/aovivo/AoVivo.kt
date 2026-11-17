@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Ponte entre o modo Presidir (no AppVM) e o que continua visível quando o app vai para segundo plano:
- * a janela flutuante (picture-in-picture) e a notificação com o cronômetro.
+ * a janela flutuante (com botões, ou o picture-in-picture do Android) e a notificação com o cronômetro.
  * Todos os tempos são marcas de relógio (ms desde 1970), então o cronômetro nunca atrasa em segundo plano.
  */
 object AoVivo {
@@ -42,6 +42,13 @@ object AoVivo {
         val tPausado: String,
         val tCanal: String,
         val tExcedido: String,
+        /** nome da seção no idioma do roteiro (etiqueta colorida na janela) */
+        val secNome: String? = null,
+        /** janela flutuante com os botões sempre à vista (precisa da permissão "Sobrepor a outros apps") */
+        val janelaControles: Boolean = false,
+        val tExpandir: String = "",
+        val tRecolher: String = "",
+        val tAbrirApp: String = "",
     ) {
         val pausado: Boolean get() = pausadoEm != null
         /** Milissegundos decorridos na parte atual (descontando as pausas). */

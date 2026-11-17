@@ -72,6 +72,9 @@ data class Config(
     val congregacao: String = "",      // nome da congregação (usado nas boas-vindas)
     val pip: Boolean = true,           // janela flutuante (picture-in-picture) ao sair do app durante o modo Presidir
     val notifAoVivo: Boolean = true,   // notificação com o cronômetro durante o modo Presidir
+    val janelaControles: Boolean = true,   // janela flutuante com os botões sempre à vista (se a permissão foi dada)
+    val introOcultar: Boolean = false,     // "Não mostrar mais" na apresentação ao abrir o app
+    val novidadesVistas: Int = 0,          // última versão (versionCode) cujas novidades já foram mostradas
 )
 
 /** Estado de uma semana: visita do SC, salas adicionais e valores digitados (nomes, anotações, marcações). */

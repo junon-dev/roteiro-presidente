@@ -106,4 +106,26 @@ class RoteiroTest {
             }
         }
     }
+
+    /** Apresentação curta (até 5 telas), em PT e ES, nos três apps; novidades só das versões ainda não vistas. */
+    @Test
+    fun apresentacaoENovidades() {
+        for (lang in listOf("pt", "es")) for (prod in listOf("meio", "guia", "completo")) {
+            val a = app.roteiro.presidente.nucleo.Dicas.apresentacao(lang, prod, "App")
+            assertTrue("$lang/$prod: ${a.size} telas", a.size in 3..5)
+            assertTrue(a.all { it.titulo.isNotBlank() && it.texto.isNotBlank() })
+            assertTrue("permissão da janela na apresentação", a.any { it.acao == "permissao" })
+            assertTrue(app.roteiro.presidente.nucleo.Dicas.ajuda(lang, prod).isNotEmpty())
+        }
+        val d = app.roteiro.presidente.nucleo.Dicas
+        assertEquals(listOf(18), d.pendentes("pt", "meio", 17, 18).map { it.codigo })
+        assertEquals(listOf(18), d.pendentes("pt", "meio", 0, 18).map { it.codigo })   // atualizou da 4.1
+        assertTrue(d.pendentes("pt", "meio", 18, 18).isEmpty())
+        // a versão atual precisa ter as novidades escritas (Dicas.novidades)
+        assertTrue("faltam as novidades da versão ${BuildConfig.VERSION_CODE} em Dicas.kt",
+            d.novidades("pt", "meio").any { it.codigo == BuildConfig.VERSION_CODE })
+        for (k in listOf("jcCfg", "jc_info", "jc_falta", "jc_permitir", "jc_recolher", "jc_abrirApp", "jc_expandir", "ajuda", "ajuda_abrir",
+            "ajuda_mostrar", "guia_pular", "guia_proximo", "guia_comecar", "guia_naoMostrar", "guia_novidades", "guia_pagina"))
+            for (l in listOf("pt", "es")) assertTrue("$l: $k", app.roteiro.presidente.nucleo.Textos.de(l)[k] != k)
+    }
 }

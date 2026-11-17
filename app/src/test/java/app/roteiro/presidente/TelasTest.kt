@@ -9,6 +9,7 @@ import app.roteiro.presidente.ui.PainelRelatorio
 import app.roteiro.presidente.ui.TelaMesa
 import app.roteiro.presidente.ui.TelaPip
 import app.roteiro.presidente.ui.TelaPrincipal
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import app.roteiro.presidente.ui.TemaApp
@@ -136,6 +137,12 @@ abstract class TelasBase(private val prefixo: String) {
                 when (tela.value) {
                     "pip" -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(320.dp, 180.dp)) { TelaPip(vm) }
                     "pipPeq" -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(240.dp, 135.dp)) { TelaPip(vm) }
+                    "controles", "recolhida" -> androidx.compose.foundation.layout.Box(
+                        androidx.compose.ui.Modifier.size(360.dp, 300.dp).background(androidx.compose.ui.graphics.Color(0xFFCBD5E1)),
+                    ) {
+                        app.roteiro.presidente.aovivo.ControlesFlutuantes(vm.infoAoVivo()!!.copy(janelaControles = true),
+                            vm.agora, recolhida = tela.value == "recolhida")
+                    }
                     else -> {
                         val alt = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
                         val px = with(androidx.compose.ui.platform.LocalDensity.current) { (alt / 2).dp.roundToPx() }
@@ -149,9 +156,37 @@ abstract class TelasBase(private val prefixo: String) {
         foto("15-janela-flutuante-excedido")
         regra.runOnIdle { tela.value = "mesa"; vm.agora = System.currentTimeMillis() + 46_000 }
         foto("16-modo-mesa")
+        // janela com os botões sempre à vista (aberta e recolhida)
+        regra.runOnIdle { tela.value = "controles"; vm.agora = System.currentTimeMillis() + 46_000 }
+        foto("17-janela-controles")
+        regra.runOnIdle { tela.value = "recolhida" }
+        foto("18-janela-recolhida")
         val info = vm.infoAoVivo()
         org.junit.Assert.assertNotNull(info)
         org.junit.Assert.assertEquals(passos.indexOfFirst { it.bloco == "p4" }, info!!.passo)
+    }
+
+    /** Apresentação ao abrir, novidades da versão e Ajuda e dicas. */
+    @Test
+    fun apresentacao() {
+        val vm = AppVM(ApplicationProvider.getApplicationContext<Application>()).apply { relogioAutomatico = false }
+        vm.irParaSemana("pt-2026-10-19")
+        val painel = androidx.compose.runtime.mutableStateOf(false)
+        regra.setContent {
+            TemaApp(vm.cfg.tema, vm.cfg.fonte) {
+                TelaPrincipal(vm)
+                vm.guia?.let { app.roteiro.presidente.ui.TelaGuia(vm, it) }
+                if (painel.value) androidx.compose.runtime.CompositionLocalProvider(app.roteiro.presidente.ui.LocalCompacto provides (prefixo == "celular")) {
+                    app.roteiro.presidente.ui.PainelAjuda(vm, aoApresentacao = {}) {}
+                }
+            }
+        }
+        regra.runOnIdle { vm.abrirGuia("apresentacao") }
+        foto("19-apresentacao")
+        regra.runOnIdle { vm.fecharGuia(false); vm.mudarCfg { it.copy(novidadesVistas = BuildConfig.VERSION_CODE - 1) }; vm.abrirGuia("novidades") }
+        foto("20-novidades")
+        regra.runOnIdle { vm.fecharGuia(false); painel.value = true }
+        foto("21-ajuda")
     }
 
     @Test

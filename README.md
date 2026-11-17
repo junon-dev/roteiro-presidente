@@ -13,6 +13,15 @@ Durante o modo Presidir, ao ir para outro aplicativo, a reunião continua visív
 
 As duas opções podem ser desligadas em Configurações. Código em `aovivo/` (serviço da notificação) e `ui/AoVivoUi.kt`.
 
+## Versão 4.2 (Guia do Presidente 1.2)
+- **Botões sempre visíveis na janela flutuante**: com a permissão “Sobrepor a outros apps”, a janela mostra parte, cronômetro e
+  voltar/pausar/avançar o tempo todo; pode ser arrastada (fica sempre dentro da tela) e recolhida num botão com o cronômetro.
+  Sem a permissão, o app continua usando o picture-in-picture do Android. Código em `aovivo/JanelaControles.kt`.
+- **Apresentação ao abrir**: até 5 telas, com “Pular” e a caixa “Não mostrar mais ao abrir”.
+- **Novidades**: aparecem uma vez, só para quem atualizou. Para cada nova versão, acrescente as novidades em
+  `nucleo/Dicas.kt` (o teste `apresentacaoENovidades` falha se a versão atual não tiver novidades escritas).
+- **Configurações → Ajuda e dicas**: rever a apresentação, ligar/desligar ao abrir, dicas de uso e histórico de novidades.
+
 ## Gerar o APK
 Cada envio para a branch `main` roda os testes, compila o APK assinado e publica em **Releases**
 (workflow `.github/workflows/gerar-apk.yml`). Para compilar de novo: **Actions → Gerar APK → Run workflow**.

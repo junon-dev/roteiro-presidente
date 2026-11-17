@@ -87,14 +87,14 @@ fun Painel(titulo: String, aoFechar: () -> Unit, rolavel: Boolean = true, conteu
 }
 
 @Composable
-private fun Secao(t: String) {
+internal fun Secao(t: String) {
     val c = LocalCores.current
     Text(t.uppercase(), color = c.suave, fontWeight = FontWeight.Bold, fontSize = 14.sp, letterSpacing = 0.8.sp,
         modifier = Modifier.padding(top = 20.dp, bottom = 6.dp))
 }
 
 @Composable
-private fun Linha(rotulo: String, detalhe: String? = null, largo: Boolean = false, controle: @Composable () -> Unit) {
+internal fun Linha(rotulo: String, detalhe: String? = null, largo: Boolean = false, controle: @Composable () -> Unit) {
     val c = LocalCores.current
     if (largo && LocalCompacto.current) {
         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
@@ -140,7 +140,7 @@ private fun Contador(valor: Int, min: Int, max: Int, aoMudar: (Int) -> Unit) {
 
 /* ---------- Configurações (inclui os arquivos) ---------- */
 @Composable
-fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, aoFechar: () -> Unit) {
+fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, aoAjuda: () -> Unit = {}, aoFechar: () -> Unit) {
     val c = LocalCores.current
     val s = vm.tx
     val ctx = LocalContext.current
@@ -164,6 +164,13 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
     }
 
     Painel(s["config"], aoFechar) {
+        // Ajuda à vista no topo: apresentação, dicas e novidades
+        Linha(s["ajuda"], s["ajuda_info"]) {
+            OutlinedButton(onClick = aoAjuda) {
+                Icon(androidx.compose.ui.res.painterResource(app.roteiro.presidente.R.drawable.ic_ajuda), null, Modifier.padding(end = 6.dp))
+                Text(s["ajuda_abrir"])
+            }
+        }
         Secao(s["geral"])
         Linha(s["idioma"], largo = true) { Opcoes(listOf("pt" to "Português", "es" to "Español"), vm.cfg.lang) { vm.mudarIdioma(it) } }
         if (Produto.temMeio) Linha(s["horaIni"]) {
@@ -193,6 +200,15 @@ fun PainelConfig(vm: AppVM, aoCanticos: () -> Unit, aoModelos: () -> Unit = {}, 
         Linha(s["vibrar"]) { Switch(vm.cfg.vibrar, { on -> vm.mudarCfg { it.copy(vibrar = on) } }) }
         Linha(s["tela"]) { Switch(vm.cfg.tela, { on -> vm.mudarCfg { it.copy(tela = on) } }) }
         Linha(s["pipCfg"], s["pip_info"]) { Switch(vm.cfg.pip, { on -> vm.mudarCfg { it.copy(pip = on) } }) }
+        val janelaPermitida = lembrarPermissaoJanela()
+        Linha(s["jcCfg"], if (!vm.cfg.janelaControles || janelaPermitida) s["jc_info"] else s["jc_falta"]) {
+            Switch(vm.cfg.janelaControles, { on -> vm.mudarCfg { it.copy(janelaControles = on) } })
+        }
+        if (vm.cfg.janelaControles && !janelaPermitida) {
+            Button(onClick = { app.roteiro.presidente.aovivo.JanelaControles.pedirPermissao(ctx) }, modifier = Modifier.padding(vertical = 6.dp)) {
+                Text(s["jc_permitir"])
+            }
+        }
         Linha(s["notifCfg"], s["notif_info"]) { Switch(vm.cfg.notifAoVivo, { on -> vm.mudarCfg { it.copy(notifAoVivo = on) } }) }
         Linha(s["palcoCfg"], s["palco_info"]) { Switch(vm.cfg.palco, { on -> vm.mudarCfg { it.copy(palco = on) }; vm.palco = on }) }
         // Tamanho do texto: barra com 6 posições, como no JW Library

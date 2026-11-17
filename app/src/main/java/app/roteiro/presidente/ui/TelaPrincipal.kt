@@ -222,7 +222,8 @@ private fun Tela(vm: AppVM) {
 
     when (painel) {
         "licoes" -> PainelLicoes(vm) { painel = null }
-        "config" -> PainelConfig(vm, aoCanticos = { painel = "canticos" }, aoModelos = { painel = "modelos" }) { painel = null }
+        "config" -> PainelConfig(vm, aoCanticos = { painel = "canticos" }, aoModelos = { painel = "modelos" }, aoAjuda = { painel = "ajuda" }) { painel = null }
+        "ajuda" -> PainelAjuda(vm, aoApresentacao = { painel = null; vm.abrirGuia() }) { painel = "config" }
         "modelos" -> PainelModelos(vm) { painel = null }
         "canticos" -> PainelCanticos(vm) { painel = "config" }
         "relatorio" -> reu?.let { PainelRelatorio(vm, it) { painel = null } }
@@ -503,9 +504,9 @@ private fun BarraPresidir(vm: AppVM, passos: List<app.roteiro.presidente.nucleo.
     }
     val corStatus = when { Math.abs(dif) < 1 -> Color.White; dif > 0 -> Color(0xFFFFB4A8); else -> Color(0xFF8FE3B0) }
     val linhaStatus = "${s["previsto"]} ${Roteiro.hm(p.ini)} · $status" + if (pausado) " · ${s["pausado"]}" else ""
-    // Botão da janela flutuante (só em aparelhos que têm picture-in-picture)
+    // Botão da janela flutuante (a de botões, se permitida, ou o picture-in-picture)
     val atividade = LocalContext.current.atividadePrincipal()
-    val podePip = atividade?.suportaPip() == true
+    val podePip = atividade?.temJanela() == true
 
     @Composable
     fun Botoes(tam: Int) {

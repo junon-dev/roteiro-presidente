@@ -44,6 +44,8 @@ import java.time.LocalDate
 class AppVM(app: Application) : AndroidViewModel(app) {
 
     val repo = Repositorio(app)
+    /** Primeira abertura neste aparelho (ainda não há dados gravados). */
+    private val instalacaoNova = !repo.existe()
     private val importador = Importador(app)
     val embutidas: List<Semana> = repo.semanasEmbutidas()
     val licoes: BaseLicoes = repo.licoes()
@@ -114,7 +116,12 @@ class AppVM(app: Application) : AndroidViewModel(app) {
 
     /** Substitui todos os dados (migração da versão anterior ou cópia de segurança). */
     fun substituir(a: Arquivo) {
-        mudar { a }
+        // apresentação e novidades já vistas neste aparelho continuam valendo
+        val atual = cfg
+        mudar { a.copy(cfg = a.cfg.copy(
+            novidadesVistas = maxOf(a.cfg.novidadesVistas, atual.novidadesVistas),
+            introOcultar = a.cfg.introOcultar || atual.introOcultar,
+        )) }
         escolherSemanaPadrao()
     }
 
@@ -748,6 +755,8 @@ class AppVM(app: Application) : AndroidViewModel(app) {
             tPausar = s["pausar"], tContinuar = s["continuar"], tAvancar = s["proxPasso"], tVoltar = s["passoAnt"],
             tASeguir = s["aseguir"], tPausado = s["pausado"].replaceFirstChar { it.uppercase() },
             tCanal = s["canalAoVivo"], tExcedido = s["excedido"],
+            secNome = secDoPasso(atual)?.let { s.sec[it] }, janelaControles = cfg.janelaControles,
+            tExpandir = s["jc_expandir"], tRecolher = s["jc_recolher"], tAbrirApp = s["jc_abrirApp"],
         )
     }
 
@@ -764,10 +773,41 @@ class AppVM(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /* ---------- apresentação, novidades e ajuda ---------- */
+
+    /** Tela de apresentação aberta: "apresentacao", "novidades" ou null (fechada). */
+    var guia by mutableStateOf<String?>(null)
+        private set
+
+    /** Novidades das versões instaladas depois da última vez que foram mostradas. */
+    fun novidadesPendentes(): List<app.roteiro.presidente.nucleo.Dicas.Versao> =
+        app.roteiro.presidente.nucleo.Dicas.pendentes(cfg.lang, Produto.id, cfg.novidadesVistas, BuildConfig.VERSION_CODE)
+
+    /** Número da versão como aparece neste app (o Guia do Presidente tem numeração própria). */
+    fun nomeVersao(v: app.roteiro.presidente.nucleo.Dicas.Versao): String = if (Produto.id == "guia") v.nomeGuia else v.nome
+
+    /** "apresentacao" (Ajuda → Ver apresentação) ou "novidades". */
+    fun abrirGuia(tipo: String = "apresentacao") { guia = tipo }
+
+    /** Fecha a apresentação; as novidades desta versão contam como vistas. */
+    fun fecharGuia(naoMostrarMais: Boolean) {
+        guia = null
+        mudarCfg { it.copy(introOcultar = naoMostrarMais, novidadesVistas = maxOf(it.novidadesVistas, BuildConfig.VERSION_CODE)) }
+    }
+
     // Fica no fim da classe: roda depois que todas as propriedades acima já existem.
     init {
         viewModelScope.launch { AoVivo.comandos.collect { executarComando(it) } }
         publicarAoVivo()
+        // Ao abrir: novidades (só para quem atualizou, uma vez por versão) ou a apresentação (até marcar "Não mostrar mais").
+        // Nada aparece se o app voltou no meio de uma reunião.
+        if (instalacaoNova) dados = dados.copy(cfg = cfg.copy(novidadesVistas = BuildConfig.VERSION_CODE))
+        guia = when {
+            dados.presidir?.ativo == true && presidindo -> null
+            novidadesPendentes().isNotEmpty() -> "novidades"
+            !cfg.introOcultar -> "apresentacao"
+            else -> null
+        }
     }
 
     override fun onCleared() {
